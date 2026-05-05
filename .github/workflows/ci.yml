@@ -52,3 +52,12 @@ jobs:
 
       - name: Exercise repair plan preview
         run: sourceos-syncd repair plan --file examples/health/degraded.snapshot.json --compact > /tmp/sourceos-syncd.repair-plan.json
+
+      - name: Exercise local store prototype
+        run: |
+          STORE_ROOT=/tmp/sourceos-syncd-store
+          sourceos-syncd store init --root "$STORE_ROOT" --compact
+          sourceos-syncd store record --root "$STORE_ROOT" --event-type add --lane normal --object-id obj-1 --producer ci --payload-json '{"path":"README.md"}' --compact
+          sourceos-syncd store record --root "$STORE_ROOT" --event-type update --lane priority --object-id obj-1 --producer ci --payload-json '{"field":"title"}' --compact
+          sourceos-syncd health snapshot --store-root "$STORE_ROOT" --compact > /tmp/sourceos-syncd.store.snapshot.json
+          sourceos-syncd health verify --file /tmp/sourceos-syncd.store.snapshot.json --compact
