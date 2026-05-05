@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos-capability.schema.json",
+  "title": "SourceOS Capability Definition",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "capability",
+    "class",
+    "description",
+    "default_decision",
+    "audit",
+    "privacy_impact"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "sourceos.capability.v0.1" },
+    "capability": { "type": "string", "pattern": "^[a-z0-9]+(\\.[a-z0-9_-]+)+$" },
+    "class": {
+      "type": "string",
+      "enum": ["ipc", "filesystem", "network", "identity", "telemetry", "diagnostics", "power", "parser", "browser", "ai", "update", "policy", "developer"]
+    },
+    "description": { "type": "string" },
+    "default_decision": { "type": "string", "enum": ["allow", "deny", "prompt", "audit"] },
+    "audit": { "type": "string", "enum": ["always", "on_deny", "on_use", "never"] },
+    "privacy_impact": { "type": "string", "enum": ["none", "low", "medium", "high", "sealed"] },
+    "requires_user_consent": { "type": "boolean" },
+    "compatible_authority_domains": { "type": "array", "items": { "type": "string" } },
+    "remediation": { "type": "string" }
+  }
+}
