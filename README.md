@@ -27,6 +27,13 @@ This repository is the canonical home for the SourceOS State Integrity Report, I
 - [`docs/canonical-event-envelope.md`](docs/canonical-event-envelope.md)
 - [`docs/implementation-roadmap.md`](docs/implementation-roadmap.md)
 
+## JSON Schemas
+
+- [`schemas/sourceos.state-integrity-report.v1alpha1.schema.json`](schemas/sourceos.state-integrity-report.v1alpha1.schema.json)
+- [`schemas/sourceos.repair-plan.v1alpha1.schema.json`](schemas/sourceos.repair-plan.v1alpha1.schema.json)
+
+The runtime validator is standard-library-only today; the schemas are the canonical external contract for downstream validators, SDKs, dashboards, and cross-repo integrations.
+
 ## Golden examples
 
 - [`examples/health/healthy.snapshot.json`](examples/health/healthy.snapshot.json)
