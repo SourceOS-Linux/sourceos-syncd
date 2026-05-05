@@ -30,6 +30,15 @@ JOURNAL_SCHEMA = "sourceos.journal-event/v1alpha1"
 
 EVENT_TYPES = {"add", "update", "delete", "checkpoint", "repair", "policy"}
 REGISTRY_KINDS = {"profiles", "devices", "actors", "schemas", "objects", "indexes", "repair-reports"}
+RECORD_SCHEMAS = {
+    "profiles": "sourceos.profile-record/v1alpha1",
+    "devices": "sourceos.device-record/v1alpha1",
+    "actors": "sourceos.actor-record/v1alpha1",
+    "schemas": "sourceos.schema-record/v1alpha1",
+    "objects": "sourceos.object-record/v1alpha1",
+    "indexes": "sourceos.index-record/v1alpha1",
+    "repair-reports": "sourceos.repair-report/v1alpha1",
+}
 DURABLE_DIRS = ("profiles", "devices", "actors", "schemas", "objects", "events", "repair-reports")
 REBUILDABLE_DIRS = ("indexes", "checkpoints")
 DISPOSABLE_DIRS = ("tmp",)
@@ -246,7 +255,7 @@ class LocalStateStore:
         safe_id = safe_record_id(record_id)
         stored = dict(record)
         stored.setdefault("record_id", record_id)
-        stored.setdefault("schema", f"sourceos.{kind.rstrip('s')}-record/v1alpha1")
+        stored.setdefault("schema", RECORD_SCHEMAS[kind])
         stored["updated_at"] = utc_now()
         tmp = registry / f"{safe_id}.json.tmp"
         target = registry / f"{safe_id}.json"
