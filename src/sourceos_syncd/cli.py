@@ -9,6 +9,7 @@ import sys
 from .evidence import load_json_file, make_evidence, validate_evidence, write_evidence_file
 from .reports import load_report, pretty_json, repair_plan, snapshot, validate_report, verify, with_fresh_diagnosis
 from .store_reports import append_store_event, init_store, snapshot_from_store
+from .trust import TrustRequest, evaluate_trust, validate_trust_decision
 
 
 def add_compact(parser: argparse.ArgumentParser) -> None:
@@ -23,7 +24,7 @@ def add_compact(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sourceos-syncd",
-        description="SourceOS state integrity snapshot, diagnosis, verification, planning, and evidence tools.",
+        description="SourceOS state integrity snapshot, diagnosis, verification, planning, evidence, and trust tools.",
     )
     parser.add_argument("--compact", action="store_true", help="emit compact JSON")
 
@@ -86,6 +87,22 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--file", "-f", required=True, help="evidence envelope JSON file")
     add_compact(validate)
 
+    trust = subcommands.add_parser("trust", help="AgentPlane-compatible trust checks")
+    trust_sub = trust.add_subparsers(dest="command", required=True)
+
+    evaluate = trust_sub.add_parser("evaluate", help="evaluate a State Integrity Report for a subject/action/lane")
+    evaluate.add_argument("--file", "-f", required=True, help="State Integrity Report JSON file")
+    evaluate.add_argument("--subject", required=True, help="request subject")
+    evaluate.add_argument("--action", required=True, help="requested action")
+    evaluate.add_argument("--lane", default="normal", help="target lane")
+    evaluate.add_argument("--allow-degraded", action="store_true", help="allow explicitly degraded mode")
+    evaluate.add_argument("--require-attestation", action="store_true", help="require signed attestation")
+    add_compact(evaluate)
+
+    trust_validate = trust_sub.add_parser("validate", help="validate an AgentPlane trust decision")
+    trust_validate.add_argument("--file", "-f", required=True, help="trust decision JSON file")
+    add_compact(trust_validate)
+
     return parser
 
 
@@ -146,6 +163,27 @@ def main(argv: list[str] | None = None) -> int:
         if args.area == "evidence" and args.command == "validate":
             envelope = load_json_file(args.file)
             errors = validate_evidence(envelope)
+            sys.stdout.write(pretty_json({"valid": not errors, "errors": errors}, pretty=pretty))
+            return 0 if not errors else 2
+
+        if args.area == "trust" and args.command == "evaluate":
+            report = load_json_file(args.file)
+            decision = evaluate_trust(
+                report,
+                TrustRequest(
+                    subject=args.subject,
+                    action=args.action,
+                    lane=args.lane,
+                    allow_degraded=args.allow_degraded,
+                    require_attestation=args.require_attestation,
+                ),
+            )
+            sys.stdout.write(pretty_json(decision, pretty=pretty))
+            return 0 if decision["status"] in {"allowed", "degraded_allowed"} else 2
+
+        if args.area == "trust" and args.command == "validate":
+            decision = load_json_file(args.file)
+            errors = validate_trust_decision(decision)
             sys.stdout.write(pretty_json({"valid": not errors, "errors": errors}, pretty=pretty))
             return 0 if not errors else 2
 
