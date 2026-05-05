@@ -1,0 +1,27 @@
+{
+  "schema": "sourceos.lampstand-evidence/v1alpha1",
+  "evidence_id": "evidence-d48d99c2094a6ca4dc54",
+  "generated_at": "2026-05-05T00:00:00Z",
+  "writer": "sourceos-syncd-local-evidence-writer",
+  "evidence_type": "policy-decision",
+  "subject": "sourceos-syncd",
+  "artifact_digest": "sha256:01828b5bf622fa56f16d13f7045ce8a3626775fbc0676331cbedb00ef144cd8a",
+  "artifact": {
+    "schema": "sourceos.policy-decision/v1alpha1",
+    "decision_id": "policy-example-secure-agent-access",
+    "generated_at": "2026-05-05T00:00:00Z",
+    "engine": "policy-fabric-local-stub",
+    "action": "agent_access",
+    "lane": "secure",
+    "status": "denied",
+    "reason": "secure_lane_requires_explicit_grant",
+    "subject": "sourceos-syncd",
+    "object_id": null,
+    "data_class": "internal"
+  },
+  "attestation": {
+    "signed": false,
+    "signature": null,
+    "reason": "local-stub-unsigned"
+  }
+}
