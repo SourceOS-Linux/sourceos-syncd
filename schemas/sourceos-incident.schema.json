@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos-incident.schema.json",
+  "title": "SourceOS Incident Bundle",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "incident_id",
+    "incident_class",
+    "created_at",
+    "summary",
+    "risk",
+    "causal_graph",
+    "affected_services",
+    "policy_context",
+    "privacy",
+    "export_policy"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "sourceos.incident.v0.1" },
+    "incident_id": { "type": "string", "pattern": "^inc_[A-Za-z0-9._:-]+$" },
+    "incident_class": {
+      "type": "string",
+      "enum": ["crash", "hang", "denial_storm", "wake_anomaly", "repair", "identity_mismatch", "parser_fault", "telemetry_policy", "security_suspicion"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "summary": { "type": "string" },
+    "risk": { "type": "string", "enum": ["none", "low", "medium", "high", "critical", "unknown"] },
+    "causal_graph": { "type": "object", "additionalProperties": true },
+    "affected_services": { "type": "array", "items": { "type": "string" } },
+    "policy_context": { "type": "object", "additionalProperties": true },
+    "resource_context": { "type": "object", "additionalProperties": true },
+    "privacy": {
+      "type": "object",
+      "required": ["tier", "redaction_policy"],
+      "additionalProperties": true
+    },
+    "export_policy": {
+      "type": "object",
+      "required": ["exportable", "requires_approval"],
+      "properties": {
+        "exportable": { "type": "boolean" },
+        "requires_approval": { "type": "boolean" }
+      }
+    }
+  }
+}
