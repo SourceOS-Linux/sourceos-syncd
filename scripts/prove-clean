@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+failed=0
+check_absent() {
+  local label="$1"
+  shift
+  if "$@" >/dev/null 2>&1; then
+    echo "FAIL: $label"
+    failed=1
+  else
+    echo "OK: $label"
+  fi
+}
+
+check_absent "no sourceos-syncd process" pgrep -f sourceos-syncd
+
+if command -v launchctl >/dev/null 2>&1; then
+  if launchctl list 2>/dev/null | grep -qi sourceos-syncd; then
+    echo "FAIL: no launchctl sourceos-syncd entry"
+    failed=1
+  else
+    echo "OK: no launchctl sourceos-syncd entry"
+  fi
+fi
+
+if find "$HOME/Library/LaunchAgents" /Library/LaunchAgents /Library/LaunchDaemons -type f 2>/dev/null | grep -qi sourceos-syncd; then
+  echo "FAIL: no sourceos-syncd launch plist"
+  failed=1
+else
+  echo "OK: no sourceos-syncd launch plist"
+fi
+
+if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | grep -qi sourceos-syncd; then
+  echo "FAIL: no sourceos-syncd listener"
+  failed=1
+else
+  echo "OK: no sourceos-syncd listener"
+fi
+
+for p in "$HOME/.local/state/sourceos-syncd" "$HOME/.config/sourceos-syncd" "$HOME/.cache/sourceos-syncd"; do
+  if [ -e "$p" ]; then
+    echo "FAIL: residue exists: $p"
+    failed=1
+  else
+    echo "OK: missing: $p"
+  fi
+done
+
+exit "$failed"
