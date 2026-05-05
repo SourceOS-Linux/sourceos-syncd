@@ -18,7 +18,10 @@ def snapshot_from_store(root: str | Path) -> dict[str, Any]:
     report["stores"] = summary["stores"]
     report["lanes"] = summary["lanes"]
     report["pipeline"] = summary["pipeline"]
+    report["local_state"] = copy.deepcopy(summary["local_state"])
     report["collection"]["status"] = "partial"
+    if not summary["local_state"]["initialized"]:
+        report["collection"]["errors"] = sorted(set(report["collection"].get("errors", []) + ["local store is not initialized; run `sourceos-syncd store init --root <path>`"]))
     report["collection"]["unavailable_fields"] = sorted(set(report["collection"].get("unavailable_fields", []) + ["memory.total_gb", "identity.boot_id"]))
     report["identity"]["store_root"] = str(Path(root).expanduser().resolve())
     report["diagnosis"] = diagnose(report)
@@ -36,3 +39,16 @@ def append_store_event(root: str | Path, event_type: str, lane: str, object_id: 
     store = LocalStateStore(root)
     store.init()
     return store.append_event(event_type=event_type, lane=lane, object_id=object_id, producer=producer, payload=payload)
+
+
+def put_store_record(root: str | Path, kind: str, record_id: str, record: dict[str, Any]) -> dict[str, Any]:
+    store = LocalStateStore(root)
+    return store.put_record(kind=kind, record_id=record_id, record=record)
+
+
+def get_store_record(root: str | Path, kind: str, record_id: str) -> dict[str, Any]:
+    return LocalStateStore(root).get_record(kind=kind, record_id=record_id)
+
+
+def list_store_records(root: str | Path, kind: str) -> list[dict[str, Any]]:
+    return LocalStateStore(root).list_records(kind=kind)
