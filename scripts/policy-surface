@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "sourceos-syncd policy surface"
+echo "filesystem: workspace_and_state_dir_only_until_declared_otherwise"
+echo "network: no_listeners_or_replication_egress_until_declared"
+echo "execution: no_shell_or_tool_execution_by_default"
+echo "approval: approval_required_for_repair_or_replication_actions"
+echo "workspace_scope: sourceos_declared_workspaces_only"
+
+echo
+echo "blocking rule: update TRUST_SURFACE.yaml before adding daemon installers, listeners, credentials, replication transports, repair mutation, or schema migration authority"
