@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${1:-}" != "--confirm" ]; then
+  echo "sourceos-syncd purge is destructive. Re-run with --confirm to remove local state/config/cache."
+  exit 2
+fi
+
+echo "Stopping sourceos-syncd if present..."
+pkill -f sourceos-syncd 2>/dev/null || true
+
+if command -v launchctl >/dev/null 2>&1; then
+  launchctl bootout "gui/$(id -u)/org.sourceos.syncd" 2>/dev/null || true
+fi
+
+rm -f "$HOME/Library/LaunchAgents/org.sourceos.syncd.plist" 2>/dev/null || true
+rm -rf "$HOME/.local/state/sourceos-syncd" "$HOME/.config/sourceos-syncd" "$HOME/.cache/sourceos-syncd"
+
+echo "sourceos-syncd local state/config/cache purged"
