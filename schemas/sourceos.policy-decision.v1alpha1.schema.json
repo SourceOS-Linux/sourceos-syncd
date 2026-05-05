@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.policy-decision.v1alpha1.schema.json",
+  "title": "SourceOS Policy Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "decision_id",
+    "generated_at",
+    "engine",
+    "action",
+    "lane",
+    "status",
+    "reason",
+    "subject",
+    "data_class"
+  ],
+  "properties": {
+    "schema": { "const": "sourceos.policy-decision/v1alpha1" },
+    "decision_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "engine": { "type": "string", "minLength": 1 },
+    "action": {
+      "type": "string",
+      "enum": ["index", "retain", "replicate", "agent_access", "repair_preview", "purge_preview", "read", "write"]
+    },
+    "lane": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["allowed", "denied", "redacted", "deferred"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "subject": { "type": "string", "minLength": 1 },
+    "object_id": { "type": ["string", "null"] },
+    "data_class": { "type": "string", "minLength": 1 }
+  }
+}
