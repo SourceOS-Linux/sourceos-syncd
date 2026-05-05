@@ -1,0 +1,117 @@
+{
+  "schema": "sourceos.repair-plan/v1alpha1",
+  "generated_at": "2026-05-04T17:16:00Z",
+  "source_report": {
+    "schema": "sourceos.state-integrity-report/v1alpha1",
+    "component": "sourceos-syncd",
+    "report_id": "example-degraded-report"
+  },
+  "plan_id": "repair-plan-example-normal-lane-replay-and-verify",
+  "status": "preview",
+  "severity": "error",
+  "summary": "Recover normal lane replay lag, verify shadow generation, and prepare disk-pressure purge preview without destructive action.",
+  "policy": {
+    "engine": "policy-fabric",
+    "required_grants": [
+      "sourceos.repair/replay",
+      "sourceos.repair/verify-shadow",
+      "sourceos.purge/preview"
+    ],
+    "destructive_grants_required": [
+      "sourceos.purge/apply"
+    ],
+    "destructive_actions_present": false
+  },
+  "preconditions": [
+    {
+      "id": "store.manifest_present",
+      "status": "required",
+      "check": "manifest_present == true"
+    },
+    {
+      "id": "journal.checksum_verified",
+      "status": "required",
+      "check": "journal.checksum_state == verified"
+    },
+    {
+      "id": "priority_lane_healthy",
+      "status": "required",
+      "check": "lanes.priority.diagnosis != unsafe"
+    }
+  ],
+  "checkpoint": {
+    "required": true,
+    "type": "shadow-generation",
+    "generation": 42,
+    "rollback_target": 41,
+    "write_audit_record": true
+  },
+  "steps": [
+    {
+      "order": 1,
+      "id": "pause_low_priority_ingestion",
+      "kind": "control",
+      "destructive": false,
+      "description": "Pause normal, archive, and migration lane ingestion while replay lag is reconciled.",
+      "expected_result": "priority, audit, repair, and tombstone writes remain available."
+    },
+    {
+      "order": 2,
+      "id": "run_normal_lane_replay",
+      "kind": "replay",
+      "destructive": false,
+      "description": "Apply unapplied normal-lane journal events until replay_lag_events reaches zero.",
+      "expected_result": "normal journal replay lag is zero and ready invariant can pass."
+    },
+    {
+      "order": 3,
+      "id": "verify_shadow_generation",
+      "kind": "verification",
+      "destructive": false,
+      "description": "Compare active generation, shadow generation, manifest, and checksums.",
+      "expected_result": "shadow state is verified or marked for rebuild."
+    },
+    {
+      "order": 4,
+      "id": "compact_normal_lane_if_needed",
+      "kind": "compaction",
+      "destructive": false,
+      "description": "Compact normal lane only if replay succeeded and compaction debt remains moderate or higher.",
+      "expected_result": "journal segment count and read amplification decrease."
+    },
+    {
+      "order": 5,
+      "id": "generate_purge_preview",
+      "kind": "purge-preview",
+      "destructive": false,
+      "description": "List ephemeral and archive objects eligible for purge under policy without deleting them.",
+      "expected_result": "operator receives exact object counts, bytes recoverable, policy basis, and audit impact."
+    },
+    {
+      "order": 6,
+      "id": "write_lampstand_evidence",
+      "kind": "attestation",
+      "destructive": false,
+      "description": "Write repair preview, replay result, and verification result to Lampstand when available.",
+      "expected_result": "repair attempt is preserved as auditable evidence."
+    }
+  ],
+  "blocked_steps": [
+    {
+      "id": "apply_destructive_purge",
+      "reason": "Requires explicit sourceos.purge/apply policy grant and operator approval."
+    }
+  ],
+  "rollback": {
+    "available": true,
+    "strategy": "restore last_known_good_generation and replay only verified journal events",
+    "requires_operator_approval": true
+  },
+  "postconditions": [
+    "replay_lag_events == 0",
+    "heartbeat.within_sla == pass",
+    "store.shadow_matches_active_generation in [pass, warn_with_rebuild_plan]",
+    "diagnosis.status in [healthy, degraded]",
+    "diagnosis.status != unsafe"
+  ]
+}
