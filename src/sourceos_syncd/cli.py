@@ -6,15 +6,9 @@ import argparse
 import json
 import sys
 
+from .evidence import load_json_file, make_evidence, validate_evidence, write_evidence_file
 from .reports import load_report, pretty_json, repair_plan, snapshot, validate_report, verify, with_fresh_diagnosis
-from .store_reports import (
-    append_store_event,
-    get_store_record,
-    init_store,
-    list_store_records,
-    put_store_record,
-    snapshot_from_store,
-)
+from .store_reports import append_store_event, init_store, snapshot_from_store
 
 
 def add_compact(parser: argparse.ArgumentParser) -> None:
@@ -29,7 +23,7 @@ def add_compact(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sourceos-syncd",
-        description="SourceOS state integrity snapshot, diagnosis, verification, and planning.",
+        description="SourceOS state integrity snapshot, diagnosis, verification, planning, and evidence tools.",
     )
     parser.add_argument("--compact", action="store_true", help="emit compact JSON")
 
@@ -72,23 +66,25 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--payload-json", default="{}", help="event payload JSON object")
     add_compact(record)
 
-    put_record = store_sub.add_parser("put-record", help="write an actor/schema/object/profile/device registry record")
-    put_record.add_argument("--root", required=True, help="local store root")
-    put_record.add_argument("--kind", required=True, help="registry kind: profiles, devices, actors, schemas, objects, indexes, repair-reports")
-    put_record.add_argument("--record-id", required=True, help="stable record id")
-    put_record.add_argument("--record-json", required=True, help="record payload JSON object")
-    add_compact(put_record)
+    evidence = subcommands.add_parser("evidence", help="local Lampstand-compatible evidence tools")
+    evidence_sub = evidence.add_subparsers(dest="command", required=True)
 
-    get_record = store_sub.add_parser("get-record", help="read one registry record")
-    get_record.add_argument("--root", required=True, help="local store root")
-    get_record.add_argument("--kind", required=True, help="registry kind")
-    get_record.add_argument("--record-id", required=True, help="stable record id")
-    add_compact(get_record)
+    wrap = evidence_sub.add_parser("wrap", help="wrap a JSON artifact in an evidence envelope")
+    wrap.add_argument("--file", "-f", required=True, help="artifact JSON file")
+    wrap.add_argument("--type", required=True, choices=["state-integrity-report", "repair-plan", "policy-decision", "local-state-summary", "agent-trust-decision", "delivery-scorecard"], help="evidence type")
+    wrap.add_argument("--subject", required=True, help="evidence subject")
+    add_compact(wrap)
 
-    list_records = store_sub.add_parser("list-records", help="list records from one registry kind")
-    list_records.add_argument("--root", required=True, help="local store root")
-    list_records.add_argument("--kind", required=True, help="registry kind")
-    add_compact(list_records)
+    write = evidence_sub.add_parser("write", help="write a local evidence envelope")
+    write.add_argument("--file", "-f", required=True, help="artifact JSON file")
+    write.add_argument("--type", required=True, choices=["state-integrity-report", "repair-plan", "policy-decision", "local-state-summary", "agent-trust-decision", "delivery-scorecard"], help="evidence type")
+    write.add_argument("--subject", required=True, help="evidence subject")
+    write.add_argument("--output-dir", required=True, help="directory for evidence envelopes")
+    add_compact(write)
+
+    validate = evidence_sub.add_parser("validate", help="validate an evidence envelope")
+    validate.add_argument("--file", "-f", required=True, help="evidence envelope JSON file")
+    add_compact(validate)
 
     return parser
 
@@ -134,21 +130,24 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write(pretty_json(event, pretty=pretty))
             return 0
 
-        if args.area == "store" and args.command == "put-record":
-            record = json.loads(args.record_json)
-            if not isinstance(record, dict):
-                raise ValueError("--record-json must decode to a JSON object")
-            stored = put_store_record(args.root, args.kind, args.record_id, record)
-            sys.stdout.write(pretty_json(stored, pretty=pretty))
+        if args.area == "evidence" and args.command == "wrap":
+            artifact = load_json_file(args.file)
+            envelope = make_evidence(artifact, args.type, args.subject)
+            sys.stdout.write(pretty_json(envelope, pretty=pretty))
             return 0
 
-        if args.area == "store" and args.command == "get-record":
-            sys.stdout.write(pretty_json(get_store_record(args.root, args.kind, args.record_id), pretty=pretty))
+        if args.area == "evidence" and args.command == "write":
+            artifact = load_json_file(args.file)
+            envelope = make_evidence(artifact, args.type, args.subject)
+            target = write_evidence_file(envelope, args.output_dir)
+            sys.stdout.write(pretty_json({"path": str(target), "evidence": envelope}, pretty=pretty))
             return 0
 
-        if args.area == "store" and args.command == "list-records":
-            sys.stdout.write(pretty_json(list_store_records(args.root, args.kind), pretty=pretty))
-            return 0
+        if args.area == "evidence" and args.command == "validate":
+            envelope = load_json_file(args.file)
+            errors = validate_evidence(envelope)
+            sys.stdout.write(pretty_json({"valid": not errors, "errors": errors}, pretty=pretty))
+            return 0 if not errors else 2
 
     except Exception as exc:  # noqa: BLE001 - CLI boundary should present clean error JSON.
         sys.stderr.write(pretty_json({"error": type(exc).__name__, "message": str(exc)}, pretty=pretty))
