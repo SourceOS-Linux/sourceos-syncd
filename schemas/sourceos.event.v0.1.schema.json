@@ -1,0 +1,409 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.event.v0.1.schema.json",
+  "title": "SourceOS Canonical Event Envelope",
+  "description": "Canonical SourceOS event envelope for process provenance, policy decisions, trust evaluation, coalescing, privacy-tiered evidence, and operator narrative.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_class",
+    "lane",
+    "severity",
+    "outcome",
+    "created_at",
+    "host",
+    "actor",
+    "causality",
+    "subject",
+    "privacy",
+    "evidence",
+    "operator_narrative",
+    "sync"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "sourceos.event.v0.1"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 4,
+      "pattern": "^evt_[A-Za-z0-9._:-]+$"
+    },
+    "event_class": {
+      "$ref": "#/$defs/event_class"
+    },
+    "lane": {
+      "$ref": "#/$defs/lane"
+    },
+    "severity": {
+      "$ref": "#/$defs/severity"
+    },
+    "outcome": {
+      "$ref": "#/$defs/outcome"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "observed_at_monotonic_ns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host_id", "platform", "privacy_zone"],
+      "properties": {
+        "host_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kernel": {
+          "type": "string"
+        },
+        "privacy_zone": {
+          "$ref": "#/$defs/privacy_tier"
+        }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_id", "actor_type", "display_name"],
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor_type": {
+          "enum": ["process", "agent", "user", "service", "kernel", "policy_engine"]
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uid": {
+          "type": ["string", "integer", "null"]
+        },
+        "session_id": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "causality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root_event_id", "trace_id", "span_id"],
+      "properties": {
+        "parent_event_id": {
+          "type": ["string", "null"],
+          "pattern": "^(evt_[A-Za-z0-9._:-]+)?$"
+        },
+        "root_event_id": {
+          "type": "string",
+          "pattern": "^evt_[A-Za-z0-9._:-]+$"
+        },
+        "span_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trace_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "display"],
+      "properties": {
+        "type": {
+          "enum": ["process", "file", "socket", "ipc_service", "object", "schema", "replica", "policy", "trust_root", "package"]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+    "trust": {
+      "$ref": "#/$defs/trust"
+    },
+    "noise_control": {
+      "$ref": "#/$defs/noise_control"
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier", "redaction_policy", "secret_fields"],
+      "properties": {
+        "tier": {
+          "$ref": "#/$defs/privacy_tier"
+        },
+        "redaction_policy": {
+          "enum": ["preserve_causality", "sealed", "raw_forensic"]
+        },
+        "secret_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "source", "summary"],
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "enum": ["kernel", "policy-engine", "trust-engine", "package-db", "process-monitor", "sync-engine", "operator", "agent", "raw-log"]
+          },
+          "raw_ref": {
+            "type": ["string", "null"]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "operator_narrative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "risk", "why", "next_action"],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk": {
+          "enum": ["none", "low", "medium", "high", "critical", "unknown"]
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "drilldown_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["replication_policy", "retention_class", "exportable"],
+      "properties": {
+        "replication_policy": {
+          "enum": ["local_only", "private_mesh", "org_controlled", "public_demo"]
+        },
+        "retention_class": {
+          "enum": ["ephemeral", "standard", "forensic", "sealed"]
+        },
+        "exportable": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "event_class": { "const": "policy.decision" } },
+        "required": ["event_class"]
+      },
+      "then": {
+        "required": ["decision"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "event_class": { "const": "trust.evaluation" } },
+        "required": ["event_class"]
+      },
+      "then": {
+        "required": ["trust"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "event_class": { "const": "telemetry.coalesced" } },
+        "required": ["event_class"]
+      },
+      "then": {
+        "required": ["noise_control"]
+      }
+    }
+  ],
+  "$defs": {
+    "event_class": {
+      "enum": [
+        "process.exec",
+        "process.exit",
+        "policy.decision",
+        "trust.evaluation",
+        "telemetry.coalesced",
+        "operator.narrative",
+        "sync.replication",
+        "object.repair",
+        "schema.validation",
+        "agent.action"
+      ]
+    },
+    "lane": {
+      "enum": [
+        "security",
+        "policy",
+        "process_lifecycle",
+        "identity",
+        "trust",
+        "package_provenance",
+        "sync",
+        "developer_diagnostics",
+        "hardware_ui",
+        "analytics"
+      ]
+    },
+    "severity": {
+      "enum": ["trace", "debug", "info", "notice", "warning", "error", "critical"]
+    },
+    "outcome": {
+      "enum": ["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed"]
+    },
+    "privacy_tier": {
+      "enum": ["public_summary", "user_private", "admin_forensic", "sealed_secret"]
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_id", "policy_bundle", "policy_rule", "operation", "target_class", "result", "semantic_outcome", "explanation_code"],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_bundle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_class": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "enum": ["allow", "deny", "defer", "degrade"]
+        },
+        "semantic_outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "explanation_code": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Z0-9_]+$"
+        }
+      }
+    },
+    "trust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "signature_state", "package_origin", "attestation_state", "network_lookup"],
+      "properties": {
+        "mode": {
+          "enum": ["local_first", "local_only", "remote_allowed", "remote_required"]
+        },
+        "signature_state": {
+          "enum": ["valid", "unsigned", "ad_hoc", "unknown", "invalid", "not_applicable"]
+        },
+        "package_origin": {
+          "enum": ["package_manager", "system", "user_local", "container", "remote", "unknown"]
+        },
+        "content_hash": {
+          "type": ["string", "null"],
+          "pattern": "^(sha256:[a-fA-F0-9]{64})?$"
+        },
+        "attestation_state": {
+          "enum": ["verified", "degraded", "missing", "failed"]
+        },
+        "network_lookup": {
+          "enum": ["not_attempted", "blocked_by_policy", "allowed", "failed", "succeeded"]
+        },
+        "degradation_reason": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "noise_control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_fingerprint", "first_seen", "last_seen", "count", "suppressed_count", "coalesce_window_ms"],
+      "properties": {
+        "event_fingerprint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "first_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_seen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "suppressed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coalesce_window_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sample_evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
