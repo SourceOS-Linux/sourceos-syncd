@@ -2,70 +2,102 @@
 
 Canonical architecture: `SourceOS-Linux/sourceos-spec/docs/architecture/sourceos-state-integrity-layer.md`
 
-This repository implements the daemon and CLI contracts for SourceOS State Integrity. The first cut is intentionally contract-first: downstream repos can integrate against stable response shapes before persistence, transports, and repair engines are complete.
+This repository implements the first executable contract for SourceOS State Integrity. The current implementation lane is Python and standard-library-first. It provides State Integrity Report generation, diagnosis, verification, and non-destructive repair planning.
+
+The next daemon phases should extend this baseline into actor, schema, object, event-log, policy, profile, and repair subsystems without breaking the current JSON report contracts.
 
 ## Contract Principles
 
 - Structured JSON is the stable integration boundary.
-- Logs are not API contracts.
-- Destructive operations must have dry-run and explicit target scope.
+- Logs are evidence, not API contracts.
+- Repair starts as preview/planning; apply paths require explicit policy and operator approval.
 - Durable state, rebuildable state, and disposable state must be classified separately.
-- Policy denials, conflicts, transport failures, and repair-needed states must not collapse into generic errors.
-- Agent writes must be attributable to registered actors.
+- Policy denials, conflicts, transport failures, degraded indexes, and repair-needed states must not collapse into generic errors.
+- Agent writes must eventually be attributable to registered actors.
+- Downstream surfaces should consume reports/events, not scrape raw daemon logs.
 
 ## Current CLI Commands
 
-```bash
-sourceos-syncd status --json
-sourceos-syncd doctor --json
-sourceos-syncd explain <object> --json
-sourceos-syncd plans --json
-sourceos-syncd actors --json
-sourceos-syncd schemas --json
-sourceos-syncd conflicts --json
-sourceos-syncd repair --dry-run --json
-sourceos-syncd repair --apply --json
-sourceos-syncd profiles --json
-sourceos-syncd devices --json
-sourceos-syncd export <workspace|profile|object> --json
-sourceos-syncd import <bundle> --json
-```
-
-## Expected Wrapper
-
-`sourceos-devtools` should expose these as:
+The current repo implementation exposes:
 
 ```bash
-sourceos sync status
-sourceos sync doctor
-sourceos sync explain <object>
-sourceos sync plans
-sourceos sync actors
-sourceos sync schemas
-sourceos sync conflicts
-sourceos sync repair --dry-run
-sourceos sync repair --apply
-sourceos sync profiles
-sourceos sync devices
-sourceos sync export <workspace|profile|object>
-sourceos sync import <bundle>
+sourceos-syncd health snapshot
+sourceos-syncd health snapshot --compact
+sourceos-syncd health explain --file examples/health/healthy.snapshot.json
+sourceos-syncd health verify --file examples/health/healthy.snapshot.json
+sourceos-syncd repair plan --file examples/health/degraded.snapshot.json
 ```
 
-## Model Families
+The current commands are intentionally read-only or preview-only. `repair plan` emits a plan; it does not mutate state.
 
-The initial Rust models define:
+## Intended CLI Commands
 
-- health states
-- durability classes
+The README tracks the intended larger CLI surface:
+
+```bash
+sourceos-syncd health snapshot
+sourceos-syncd health explain
+sourceos-syncd health verify
+sourceos-syncd repair plan
+sourceos-syncd repair apply --approved-plan ./repair-plan.json
+sourceos-syncd repair rollback
+sourceos-syncd events explain
+sourceos-syncd events coalesce
+sourceos-syncd events verify
+```
+
+Apply/rollback and event commands are not the current safe baseline unless implemented with tests and policy gates.
+
+## Expected SourceOS Wrapper
+
+`sourceos-devtools` should eventually expose equivalent shared commands:
+
+```bash
+sourceos health snapshot --json
+sourceos health explain
+sourceos health verify
+sourceos repair plan
+sourceos repair apply --approved-plan ./repair-plan.json
+sourceos repair rollback
+sourceos events explain
+sourceos events coalesce
+sourceos events verify
+```
+
+The broader `sourceos sync ...` surface can wrap this daemon after object registry, actor registry, schema registry, and sync-plan primitives exist.
+
+## Current Model Families
+
+The current Python implementation defines these contract families:
+
+- State Integrity Report v1alpha1
+- Repair Plan v1alpha1
+- identity and collection metadata
+- runtime heartbeat/replay timestamps
+- store generation/checksum/migration metadata
+- lane health, objects, journal, and maintenance metadata
+- pipeline counters
+- resource pressure
+- policy decision counters
+- invariants
+- diagnosis
+- controls
+- attestation
+
+## Next Model Families
+
+The next implementation phase should add first-class contracts for:
+
 - actor records
 - source objects
 - schema contracts
 - sync plans
 - conflicts
 - policy decisions
-- integrity events
-- state status
-- repair reports
+- canonical integrity events
+- repair reports tied to durable/rebuildable/disposable state
+- profile and device trust records
+- agent object transactions
 
 ## MVP Persistence Boundary
 
@@ -90,3 +122,4 @@ The next implementation phase should add persistence in this order:
 - no anonymous agent writes
 - no log-scraping integrations
 - no silent schema drift
+- no split-brain implementation language lane without an explicit migration decision
