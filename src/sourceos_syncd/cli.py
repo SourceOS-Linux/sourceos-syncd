@@ -7,7 +7,14 @@ import json
 import sys
 
 from .reports import load_report, pretty_json, repair_plan, snapshot, validate_report, verify, with_fresh_diagnosis
-from .store_reports import append_store_event, init_store, snapshot_from_store
+from .store_reports import (
+    append_store_event,
+    get_store_record,
+    init_store,
+    list_store_records,
+    put_store_record,
+    snapshot_from_store,
+)
 
 
 def add_compact(parser: argparse.ArgumentParser) -> None:
@@ -65,6 +72,24 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--payload-json", default="{}", help="event payload JSON object")
     add_compact(record)
 
+    put_record = store_sub.add_parser("put-record", help="write an actor/schema/object/profile/device registry record")
+    put_record.add_argument("--root", required=True, help="local store root")
+    put_record.add_argument("--kind", required=True, help="registry kind: profiles, devices, actors, schemas, objects, indexes, repair-reports")
+    put_record.add_argument("--record-id", required=True, help="stable record id")
+    put_record.add_argument("--record-json", required=True, help="record payload JSON object")
+    add_compact(put_record)
+
+    get_record = store_sub.add_parser("get-record", help="read one registry record")
+    get_record.add_argument("--root", required=True, help="local store root")
+    get_record.add_argument("--kind", required=True, help="registry kind")
+    get_record.add_argument("--record-id", required=True, help="stable record id")
+    add_compact(get_record)
+
+    list_records = store_sub.add_parser("list-records", help="list records from one registry kind")
+    list_records.add_argument("--root", required=True, help="local store root")
+    list_records.add_argument("--kind", required=True, help="registry kind")
+    add_compact(list_records)
+
     return parser
 
 
@@ -107,6 +132,22 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("--payload-json must decode to a JSON object")
             event = append_store_event(args.root, args.event_type, args.lane, args.object_id, args.producer, payload)
             sys.stdout.write(pretty_json(event, pretty=pretty))
+            return 0
+
+        if args.area == "store" and args.command == "put-record":
+            record = json.loads(args.record_json)
+            if not isinstance(record, dict):
+                raise ValueError("--record-json must decode to a JSON object")
+            stored = put_store_record(args.root, args.kind, args.record_id, record)
+            sys.stdout.write(pretty_json(stored, pretty=pretty))
+            return 0
+
+        if args.area == "store" and args.command == "get-record":
+            sys.stdout.write(pretty_json(get_store_record(args.root, args.kind, args.record_id), pretty=pretty))
+            return 0
+
+        if args.area == "store" and args.command == "list-records":
+            sys.stdout.write(pretty_json(list_store_records(args.root, args.kind), pretty=pretty))
             return 0
 
     except Exception as exc:  # noqa: BLE001 - CLI boundary should present clean error JSON.
