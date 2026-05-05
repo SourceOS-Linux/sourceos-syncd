@@ -1,0 +1,77 @@
+schema_version: "1.0"
+component: sourceos-syncd
+repo: SourceOS-Linux/sourceos-syncd
+owner: SourceOS-Linux
+runtime_classes:
+  - sync_service
+  - local_first_database
+  - credential_broker
+authority_summary: >-
+  SourceOS State Integrity daemon: local-first object, actor, schema, repair, provenance, and policy-governed replication substrate.
+  This trust surface is a first-pass declaration and must be updated before any daemon installer, listener, credential store, or replication transport ships.
+
+entrypoints: []
+launch_services: []
+containers: []
+
+network:
+  plaintext_non_loopback_allowed: false
+  listeners: []
+  egress: []
+
+filesystem:
+  host_mounts: []
+  writable_paths:
+    - ~/.local/state/sourceos-syncd/
+    - ~/.config/sourceos-syncd/
+  cache_paths:
+    - ~/.cache/sourceos-syncd/
+  log_paths:
+    - ~/.local/state/sourceos-syncd/logs/
+
+credentials:
+  expected_secrets: []
+  secret_locations: []
+  inherits_ssh_agent: false
+  redaction_required: true
+
+policy:
+  filesystem: workspace_and_state_dir_only_until_declared_otherwise
+  network: no_listeners_or_replication_egress_until_declared
+  execution: no_shell_or_tool_execution_by_default
+  approval: approval_required_for_repair_or_replication_actions
+  workspace_scope: sourceos_declared_workspaces_only
+
+model_providers: []
+browser_surfaces: []
+update_channels: []
+remote_config: []
+
+purge:
+  commands:
+    - rm -rf ~/.local/state/sourceos-syncd ~/.config/sourceos-syncd ~/.cache/sourceos-syncd
+  removes:
+    - sourceos-syncd state directory
+    - sourceos-syncd config directory
+    - sourceos-syncd cache directory
+    - sourceos-syncd logs
+
+prove_clean:
+  checks:
+    - no process matching sourceos-syncd
+    - no LaunchAgent, LaunchDaemon, systemd unit, or scheduled task matching sourceos-syncd
+    - no listener owned by sourceos-syncd
+    - no credentials owned by sourceos-syncd
+    - no state, config, cache, or log residue unless explicitly retained by user
+
+known_risks:
+  - Future replication transports may expose local or remote network surfaces.
+  - Repair workflows may mutate local-first state and need replayable evidence.
+  - Provenance stores may contain sensitive local path, actor, device, or object metadata.
+  - Sync conflict handling may create destructive merge or rollback behavior if policy is weak.
+
+compensating_controls:
+  - Declare no listeners, containers, launch services, or credentials until implemented.
+  - Require policy admission for repair, replication, rollback, and schema migration.
+  - Require redaction for actor/device/object provenance in logs and reports.
+  - Add prove-clean before daemon installation support lands.
