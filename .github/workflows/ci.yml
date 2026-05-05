@@ -61,3 +61,11 @@ jobs:
           sourceos-syncd store record --root "$STORE_ROOT" --event-type update --lane priority --object-id obj-1 --producer ci --payload-json '{"field":"title"}' --compact
           sourceos-syncd health snapshot --store-root "$STORE_ROOT" --compact > /tmp/sourceos-syncd.store.snapshot.json
           sourceos-syncd health verify --file /tmp/sourceos-syncd.store.snapshot.json --compact
+
+      - name: Exercise local evidence writer
+        run: |
+          EVIDENCE_DIR=/tmp/sourceos-syncd-evidence
+          sourceos-syncd evidence wrap --file examples/policy/secure-agent-access.decision.json --type policy-decision --subject sourceos-syncd --compact > /tmp/sourceos-syncd.policy.evidence.json
+          sourceos-syncd evidence validate --file /tmp/sourceos-syncd.policy.evidence.json --compact
+          sourceos-syncd evidence write --file examples/policy/secure-agent-access.decision.json --type policy-decision --subject sourceos-syncd --output-dir "$EVIDENCE_DIR" --compact > /tmp/sourceos-syncd.evidence-write.json
+          test -n "$(ls -A "$EVIDENCE_DIR")"
