@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.agent-trust-decision.v1alpha1.schema.json",
+  "title": "SourceOS Agent Trust Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "decision_id",
+    "generated_at",
+    "engine",
+    "subject",
+    "action",
+    "lane",
+    "status",
+    "reason",
+    "report_digest",
+    "report_status",
+    "allow_degraded",
+    "require_attestation",
+    "evidence"
+  ],
+  "properties": {
+    "schema": { "const": "sourceos.agent-trust-decision/v1alpha1" },
+    "decision_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "engine": { "type": "string", "minLength": 1 },
+    "subject": { "type": "string", "minLength": 1 },
+    "action": { "type": "string", "minLength": 1 },
+    "lane": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["allowed", "degraded_allowed", "blocked", "unknown"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "report_digest": { "type": "string", "pattern": "^sha256:" },
+    "report_status": { "type": "string", "minLength": 1 },
+    "allow_degraded": { "type": "boolean" },
+    "require_attestation": { "type": "boolean" },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["contract_errors", "diagnosis", "attestation_signed", "available_lanes", "policy_counts"],
+      "properties": {
+        "contract_errors": { "type": "array", "items": { "type": "string" } },
+        "diagnosis": { "type": "object", "additionalProperties": true },
+        "attestation_signed": { "type": "boolean" },
+        "available_lanes": { "type": "array", "items": { "type": "string" } },
+        "policy_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+      }
+    }
+  }
+}
