@@ -1,0 +1,19 @@
+{
+  "schema": "sourceos.sync-plan/v1alpha1",
+  "plan_id": "sync-plan:alpha-review",
+  "source_actor": "actor:agent-one",
+  "target_actor": "actor:local-user",
+  "profile_id": "profile:local-dev",
+  "workspace_id": "workspace:default",
+  "object_ids": ["object:alpha"],
+  "operation_class": "repair",
+  "dependencies": ["policy-decision:review-alpha"],
+  "policy_decision_ref": "policy-decision:review-alpha",
+  "retry_policy": "manual_review_only",
+  "conflict_policy": "human_review_required",
+  "status": "planned",
+  "user_explanation": "A review plan exists for object alpha in the local fixture.",
+  "created_at": "2026-05-05T00:08:00Z",
+  "updated_at": "2026-05-05T00:08:00Z",
+  "last_error": null
+}
