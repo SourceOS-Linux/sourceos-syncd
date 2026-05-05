@@ -18,12 +18,15 @@ def snapshot_from_store(root: str | Path) -> dict[str, Any]:
     report["stores"] = summary["stores"]
     report["lanes"] = summary["lanes"]
     report["pipeline"] = summary["pipeline"]
+    report["local_state"] = copy.deepcopy(summary["local_state"])
     report["collection"]["status"] = "partial"
     if not summary["local_state"]["initialized"]:
         report["collection"]["errors"] = sorted(set(report["collection"].get("errors", []) + ["local store is not initialized; run store init first"]))
     report["collection"]["unavailable_fields"] = sorted(set(report["collection"].get("unavailable_fields", []) + ["memory.total_gb", "identity.boot_id"]))
     report["identity"]["store_root"] = str(Path(root).expanduser().resolve())
     report["diagnosis"] = diagnose(report)
+    # Keep these inside diagnosis for existing tests/consumers, while also exposing
+    # report.local_state as the cleaner dashboard/API surface.
     report["diagnosis"]["local_state"] = copy.deepcopy(summary["local_state"])
     report["diagnosis"]["top_producers"] = copy.deepcopy(summary.get("top_producers", []))
     report["invariants"] = verify(report)["invariants"]
