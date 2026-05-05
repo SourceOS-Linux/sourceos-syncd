@@ -40,8 +40,8 @@ def utc_now() -> str:
 
 
 def safe_record_id(record_id: str) -> str:
-    """Return a filesystem-safe record id while keeping ids readable."""
-    cleaned = "".join(ch if ch.isalnum() or ch in {"-", "_", ".", ":"} else "_" for ch in record_id.strip())
+    """Return a portable filesystem-safe record id while keeping ids readable."""
+    cleaned = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in record_id.strip())
     cleaned = cleaned.strip(".")
     if not cleaned:
         raise ValueError("record id cannot be empty")
@@ -370,7 +370,7 @@ class LocalStateStore:
             "stores": [
                 {
                     "name": "content-store-a",
-                    "role": "active" if initialized else "dormant",
+                    "role": "active" if initialized else "retired",
                     "backend": manifest.get("backend", "filesystem-jsonl"),
                     "schema_version": "1.0.0",
                     "created_by_version": manifest.get("created_by_version", "0.1.0"),
