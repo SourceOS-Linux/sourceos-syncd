@@ -1,0 +1,253 @@
+{
+  "schema": "sourceos.state-integrity-report/v1alpha1",
+  "generated_at": "2026-05-04T17:15:17Z",
+  "identity": {
+    "component": "sourceos-syncd",
+    "repo": "SourceOS-Linux/sourceos-syncd",
+    "pid": 675,
+    "process_name": "sourceos-syncd",
+    "node_id_hash": "sha256:example-local-node",
+    "boot_id": "example-boot-id",
+    "version": "0.1.0",
+    "commit": "example",
+    "build_provenance": "local-dev",
+    "platform": "linux",
+    "service_manager": "systemd"
+  },
+  "collection": {
+    "status": "complete",
+    "duration_ms": 14,
+    "errors": [],
+    "redacted_fields": [],
+    "permission_denied_fields": [],
+    "timed_out_fields": [],
+    "unavailable_fields": []
+  },
+  "runtime": {
+    "process_started_at": "2026-05-04T12:00:00Z",
+    "runtime_ready_at": "2026-05-04T12:00:03Z",
+    "store_opened_at": "2026-05-04T12:00:04Z",
+    "replay_started_at": "2026-05-04T12:00:04Z",
+    "replay_completed_at": "2026-05-04T12:00:07Z",
+    "first_heartbeat_at": "2026-05-04T12:00:08Z",
+    "last_heartbeat_at": "2026-05-04T17:15:15Z",
+    "last_clean_shutdown_at": "2026-05-03T14:47:37Z",
+    "last_dirty_open_at": null
+  },
+  "stores": [
+    {
+      "name": "content-store-a",
+      "role": "active",
+      "backend": "sqlite",
+      "schema_version": "1.0.0",
+      "created_by_version": "0.1.0",
+      "runtime_version": "0.1.0",
+      "previous_runtime_version": null,
+      "migration_state": "none",
+      "active_generation": 42,
+      "last_known_good_generation": 42,
+      "shadow_present": true,
+      "manifest_present": true,
+      "checksum_state": "verified",
+      "flags_raw": 100664130,
+      "flags_hex": "0x6000342",
+      "flags_decoded": [
+        "LANE_CONTENT",
+        "LANE_USER_VISIBLE",
+        "STORE_JOURNALED",
+        "STORE_SHADOWED",
+        "COMPACTION_ENABLED"
+      ],
+      "unknown_flags": []
+    }
+  ],
+  "lanes": [
+    {
+      "name": "normal",
+      "status": "active",
+      "sla": {
+        "max_heartbeat_age_ms": 30000,
+        "max_replay_lag_events": 100,
+        "max_replay_lag_ms": 10000
+      },
+      "objects": {
+        "total": 32695,
+        "tombstones": 165,
+        "orphans": 0,
+        "corrupted": 0,
+        "encrypted": 0,
+        "redacted": 0
+      },
+      "journal": {
+        "segment_count": 5,
+        "total_bytes": 166228,
+        "max_segment_bytes": 166228,
+        "oldest_unapplied_event_age_ms": 0,
+        "replay_lag_events": 0,
+        "replay_lag_bytes": 0,
+        "replay_throughput_events_per_sec": 1200,
+        "replay_eta_ms": 0,
+        "checksum_state": "verified"
+      },
+      "maintenance": {
+        "last_compact_started_at": "2026-05-03T14:47:04Z",
+        "last_compact_completed_at": "2026-05-03T14:47:38Z",
+        "last_compact_duration_ms": 34000,
+        "compaction_debt": "low",
+        "last_purge_started_at": "2026-03-15T09:00:00Z",
+        "last_purge_completed_at": "2026-03-15T09:00:02Z",
+        "purge_debt": "low",
+        "last_repair_at": null,
+        "repair_debt": "none"
+      }
+    },
+    {
+      "name": "priority",
+      "status": "active",
+      "sla": {
+        "max_heartbeat_age_ms": 30000,
+        "max_replay_lag_events": 0,
+        "max_replay_lag_ms": 1000
+      },
+      "objects": {
+        "total": 4813,
+        "tombstones": 28,
+        "orphans": 0,
+        "corrupted": 0,
+        "encrypted": 0,
+        "redacted": 0
+      },
+      "journal": {
+        "segment_count": 3,
+        "total_bytes": 1340,
+        "max_segment_bytes": 1340,
+        "oldest_unapplied_event_age_ms": 0,
+        "replay_lag_events": 0,
+        "replay_lag_bytes": 0,
+        "replay_throughput_events_per_sec": 900,
+        "replay_eta_ms": 0,
+        "checksum_state": "verified"
+      },
+      "maintenance": {
+        "last_compact_started_at": "2026-05-03T14:47:07Z",
+        "last_compact_completed_at": "2026-05-03T14:47:28Z",
+        "last_compact_duration_ms": 21000,
+        "compaction_debt": "none",
+        "last_purge_started_at": "2026-03-15T09:00:00Z",
+        "last_purge_completed_at": "2026-03-15T09:00:02Z",
+        "purge_debt": "low",
+        "last_repair_at": null,
+        "repair_debt": "none"
+      }
+    }
+  ],
+  "pipeline": {
+    "add": {
+      "external_requested": 1151,
+      "internal_generated": 2,
+      "accepted": 1153,
+      "journaled": 1153,
+      "applied": 1153,
+      "deduped": 0,
+      "replayed": 0,
+      "skipped": 0,
+      "failed": 0
+    },
+    "update": {
+      "external_requested": 3706,
+      "internal_generated": 2214,
+      "accepted": 5920,
+      "journaled": 3706,
+      "applied": 5920,
+      "deduped": 0,
+      "replayed": 2214,
+      "skipped": 0,
+      "failed": 0
+    },
+    "delete": {
+      "external_requested": 193,
+      "authorized": 193,
+      "tombstoned": 193,
+      "journaled": 360,
+      "propagated": 180,
+      "purged": 0,
+      "failed": 0
+    }
+  },
+  "resources": {
+    "disk": {
+      "filesystem": "btrfs",
+      "free_bytes": 24307728384,
+      "total_bytes": 148315832320,
+      "free_ratio": 0.164,
+      "pressure": "watch"
+    },
+    "memory": {
+      "total_gb": 8,
+      "budget_mb": 256,
+      "pressure": "none"
+    }
+  },
+  "policy": {
+    "policy_engine": "policy-fabric",
+    "policy_version": "example",
+    "indexing_policy": "sourceos.index/default",
+    "retention_policy": "sourceos.retention/local-first-default",
+    "replication_policy": "sourceos.replication/local-only",
+    "agent_access_policy": "sourceos.agent/trust-gated",
+    "policy_decisions": {
+      "allowed": 1844,
+      "denied": 12,
+      "redacted": 7,
+      "deferred": 0
+    }
+  },
+  "invariants": [
+    {
+      "id": "journal.no_unapplied_events_when_ready",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "replay_lag_events": 0
+      },
+      "remediation": "run_replay"
+    },
+    {
+      "id": "store.shadow_matches_active_generation",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "active_generation": 42,
+        "shadow_generation": 42
+      },
+      "remediation": "rebuild_shadow"
+    },
+    {
+      "id": "heartbeat.within_sla",
+      "status": "pass",
+      "severity": "info",
+      "evidence": {
+        "age_ms": 2000,
+        "max_heartbeat_age_ms": 30000
+      },
+      "remediation": "restart_or_mark_stale"
+    }
+  ],
+  "diagnosis": {
+    "status": "healthy",
+    "severity": "info",
+    "summary": "All active lanes are within replay, heartbeat, shadow, and policy thresholds.",
+    "causes": [],
+    "affected_lanes": [],
+    "affected_domains": [],
+    "safe_actions": [
+      "continue_normal_operation"
+    ],
+    "blocked_actions": []
+  },
+  "controls": [],
+  "attestation": {
+    "signed": false,
+    "reason": "local-development-example"
+  }
+}
