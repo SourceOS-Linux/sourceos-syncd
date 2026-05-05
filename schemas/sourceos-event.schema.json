@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos-event.schema.json",
+  "title": "SourceOS Canonical Event",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_class",
+    "lane",
+    "severity",
+    "outcome",
+    "created_at",
+    "host",
+    "actor",
+    "causality",
+    "subject",
+    "privacy",
+    "operator_narrative",
+    "sync"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "sourceos.event.v0.1" },
+    "event_id": { "type": "string", "pattern": "^evt_[A-Za-z0-9._:-]+$" },
+    "event_class": {
+      "type": "string",
+      "enum": [
+        "process.exec",
+        "process.exit",
+        "policy.decision",
+        "trust.evaluation",
+        "telemetry.coalesced",
+        "operator.narrative",
+        "sync.replication",
+        "object.repair",
+        "schema.validation",
+        "agent.action",
+        "power.wake",
+        "power.sleep",
+        "network.keepalive",
+        "identity.reconciled",
+        "service.lifecycle",
+        "app.identity_mismatch",
+        "parser.worker",
+        "incident.bundle"
+      ]
+    },
+    "lane": {
+      "type": "string",
+      "enum": [
+        "security",
+        "policy",
+        "process_lifecycle",
+        "identity",
+        "trust",
+        "package_provenance",
+        "sync",
+        "developer_diagnostics",
+        "hardware_ui",
+        "analytics",
+        "power",
+        "network",
+        "parser",
+        "product_identity",
+        "incident"
+      ]
+    },
+    "severity": { "type": "string", "enum": ["trace", "debug", "info", "notice", "warning", "error", "critical"] },
+    "outcome": {
+      "type": "string",
+      "enum": ["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed", "repaired", "observed"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "observed_at_monotonic_ns": { "type": ["integer", "null"], "minimum": 0 },
+    "host": {
+      "type": "object",
+      "required": ["host_id", "platform", "privacy_zone"],
+      "additionalProperties": true,
+      "properties": {
+        "host_id": { "type": "string" },
+        "platform": { "type": "string" },
+        "kernel": { "type": ["string", "null"] },
+        "privacy_zone": { "type": "string", "enum": ["public_summary", "user_private", "admin_forensic", "sealed_secret"] }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "required": ["actor_id", "actor_type", "display_name"],
+      "additionalProperties": true,
+      "properties": {
+        "actor_id": { "type": "string" },
+        "actor_type": { "type": "string", "enum": ["process", "agent", "user", "service", "kernel", "policy_engine"] },
+        "display_name": { "type": "string" },
+        "uid": { "type": ["string", "integer", "null"] },
+        "session_id": { "type": ["string", "null"] },
+        "authority_domain": { "type": ["string", "null"] }
+      }
+    },
+    "causality": {
+      "type": "object",
+      "required": ["root_event_id", "trace_id"],
+      "additionalProperties": true,
+      "properties": {
+        "parent_event_id": { "type": ["string", "null"] },
+        "root_event_id": { "type": "string" },
+        "span_id": { "type": ["string", "null"] },
+        "trace_id": { "type": "string" }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "required": ["type", "id", "display"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["process", "file", "socket", "ipc_service", "object", "schema", "replica", "policy", "power_state", "network_endpoint", "service", "application", "parser", "incident"]
+        },
+        "id": { "type": "string" },
+        "display": { "type": "string" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "decision_id": { "type": "string" },
+        "policy_bundle": { "type": "string" },
+        "policy_rule": { "type": "string" },
+        "operation": { "type": "string" },
+        "target_class": { "type": "string" },
+        "result": { "type": "string", "enum": ["allow", "deny", "defer", "audit"] },
+        "semantic_outcome": { "type": "string", "enum": ["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed"] },
+        "explanation_code": { "type": "string" }
+      }
+    },
+    "trust": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "mode": { "type": "string", "enum": ["local_first", "remote_allowed", "remote_required", "offline"] },
+        "signature_state": { "type": "string", "enum": ["valid", "unsigned", "ad_hoc", "unknown", "invalid", "not_applicable"] },
+        "package_origin": { "type": "string", "enum": ["package_manager", "system", "user_local", "container", "remote", "unknown"] },
+        "content_hash": { "type": ["string", "null"] },
+        "attestation_state": { "type": "string", "enum": ["verified", "degraded", "missing", "failed", "not_applicable"] },
+        "network_lookup": { "type": "string", "enum": ["not_attempted", "blocked_by_policy", "allowed", "failed", "succeeded"] }
+      }
+    },
+    "noise_control": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "event_fingerprint": { "type": "string" },
+        "first_seen": { "type": "string", "format": "date-time" },
+        "last_seen": { "type": "string", "format": "date-time" },
+        "count": { "type": "integer", "minimum": 1 },
+        "suppressed_count": { "type": "integer", "minimum": 0 },
+        "coalesce_window_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "required": ["tier", "redaction_policy"],
+      "additionalProperties": true,
+      "properties": {
+        "tier": { "type": "string", "enum": ["public_summary", "user_private", "admin_forensic", "sealed_secret"] },
+        "redaction_policy": { "type": "string", "enum": ["preserve_causality", "hash_sensitive_fields", "sealed_local_only"] },
+        "secret_fields": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source", "summary"],
+        "additionalProperties": true,
+        "properties": {
+          "evidence_id": { "type": "string" },
+          "source": { "type": "string" },
+          "raw_ref": { "type": ["string", "null"] },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    "operator_narrative": {
+      "type": "object",
+      "required": ["summary", "risk", "why", "next_action"],
+      "additionalProperties": true,
+      "properties": {
+        "summary": { "type": "string" },
+        "risk": { "type": "string", "enum": ["none", "low", "medium", "high", "critical", "unknown"] },
+        "why": { "type": "string" },
+        "next_action": { "type": "string" }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "required": ["replication_policy", "retention_class", "exportable"],
+      "additionalProperties": true,
+      "properties": {
+        "replication_policy": { "type": "string", "enum": ["local_only", "private_mesh", "org_controlled", "public_demo"] },
+        "retention_class": { "type": "string", "enum": ["ephemeral", "standard", "forensic", "sealed"] },
+        "exportable": { "type": "boolean" }
+      }
+    }
+  }
+}
