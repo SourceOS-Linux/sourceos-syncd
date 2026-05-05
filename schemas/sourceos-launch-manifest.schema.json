@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos-launch-manifest.schema.json",
+  "title": "SourceOS Hermetic Launch Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "product_id",
+    "display_name",
+    "bundle_identity",
+    "entrypoint",
+    "environment",
+    "identity_invariants"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "sourceos.launch_manifest.v0.1" },
+    "product_id": { "type": "string" },
+    "display_name": { "type": "string" },
+    "bundle_identity": {
+      "type": "object",
+      "required": ["bundle_id", "expected_process_name"],
+      "properties": {
+        "bundle_id": { "type": "string" },
+        "expected_process_name": { "type": "string" },
+        "upstream_engine": { "type": ["string", "null"] }
+      }
+    },
+    "entrypoint": {
+      "type": "object",
+      "required": ["absolute_path", "args"],
+      "properties": {
+        "absolute_path": { "type": "string", "pattern": "^/" },
+        "args": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": ["inherit_user_shell", "path", "allowed_variables"],
+      "properties": {
+        "inherit_user_shell": { "type": "boolean" },
+        "path": { "type": "array", "items": { "type": "string" } },
+        "allowed_variables": { "type": "array", "items": { "type": "string" } },
+        "denied_variables": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "identity_invariants": {
+      "type": "object",
+      "required": ["dock_name", "menu_name", "crash_report_name", "profile_path_policy", "helper_prefix"],
+      "properties": {
+        "dock_name": { "type": "string" },
+        "menu_name": { "type": "string" },
+        "crash_report_name": { "type": "string" },
+        "profile_path_policy": { "type": "string" },
+        "helper_prefix": { "type": "string" }
+      }
+    }
+  }
+}
