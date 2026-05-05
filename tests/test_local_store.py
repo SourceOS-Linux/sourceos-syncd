@@ -67,7 +67,7 @@ def test_store_report_adapter_initializes_for_record_command_compatibility(tmp_p
     assert event["event_id"] == "evt-00000001"
 
 
-def test_registry_record_round_trip_and_counts(tmp_path: Path) -> None:
+def test_actor_schema_and_object_registry_round_trips_and_counts(tmp_path: Path) -> None:
     root = tmp_path / "state"
     store = LocalStateStore(root)
     store.init()
@@ -82,12 +82,40 @@ def test_registry_record_round_trip_and_counts(tmp_path: Path) -> None:
             "capabilities": ["read", "write"],
         },
     )
+    schema = store.put_record(
+        "schemas",
+        "schema:source-object:v1",
+        {
+            "schema_id": "schema:source-object:v1",
+            "object_type": "source_object",
+            "schema_version": "v1",
+            "required_fields": ["object_id", "object_type", "profile_id"],
+        },
+    )
+    obj = store.put_record(
+        "objects",
+        "object:alpha",
+        {
+            "object_id": "object:alpha",
+            "object_type": "file",
+            "schema_id": "schema:source-object:v1",
+            "profile_id": "profile:local-dev",
+        },
+    )
 
-    assert actor["record_id"] == "actor:agent-one"
     assert actor["schema"] == "sourceos.actor-record/v1alpha1"
+    assert schema["schema"] == "sourceos.schema-record/v1alpha1"
+    assert obj["schema"] == "sourceos.object-record/v1alpha1"
     assert store.get_record("actors", "actor:agent-one")["display_name"] == "Agent One"
+    assert store.get_record("schemas", "schema:source-object:v1")["object_type"] == "source_object"
+    assert store.get_record("objects", "object:alpha")["object_type"] == "file"
     assert [record["actor_id"] for record in store.list_records("actors")] == ["actor:agent-one"]
-    assert store.summarize()["local_state"]["registry_counts"]["actors"] == 1
+    assert [record["schema_id"] for record in store.list_records("schemas")] == ["schema:source-object:v1"]
+    assert [record["object_id"] for record in store.list_records("objects")] == ["object:alpha"]
+    counts = store.summarize()["local_state"]["registry_counts"]
+    assert counts["actors"] == 1
+    assert counts["schemas"] == 1
+    assert counts["objects"] == 1
 
 
 def test_registry_rejects_unknown_kind_and_empty_id(tmp_path: Path) -> None:
