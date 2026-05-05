@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "sourceos-syncd network surface"
+echo "declared listeners: none"
+echo "declared egress: none"
+
+echo
+echo "observed listeners:"
+if command -v lsof >/dev/null 2>&1; then
+  lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | grep -i sourceos-syncd || echo "  none"
+else
+  echo "  lsof unavailable"
+fi
+
+echo
+echo "policy: no listeners or replication egress until TRUST_SURFACE.yaml is updated"
