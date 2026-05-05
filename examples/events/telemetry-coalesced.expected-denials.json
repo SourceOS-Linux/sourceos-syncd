@@ -1,0 +1,77 @@
+{
+  "schema_version": "sourceos.event.v0.1",
+  "event_id": "evt_coalesced_expected_denials_20260504_192158",
+  "event_class": "telemetry.coalesced",
+  "lane": "policy",
+  "severity": "notice",
+  "outcome": "blocked_expected",
+  "created_at": "2026-05-04T19:21:58.489000-04:00",
+  "observed_at_monotonic_ns": 1635335489000,
+  "host": {
+    "host_id": "host_local_pseudonym",
+    "platform": "sourceos-darwin-compatible",
+    "kernel": "darwin-family",
+    "privacy_zone": "user_private"
+  },
+  "actor": {
+    "actor_id": "actor_noise_coalescer",
+    "actor_type": "service",
+    "display_name": "telemetry coalescer",
+    "uid": "system-service",
+    "session_id": null
+  },
+  "causality": {
+    "parent_event_id": "evt_shell_launch_20260504_192158",
+    "root_event_id": "evt_shell_launch_20260504_192158",
+    "span_id": "span_coalesced_expected_denials",
+    "trace_id": "trace_shell_launch_20260504_192158"
+  },
+  "subject": {
+    "type": "policy",
+    "id": "policy_expected_denial_group",
+    "display": "repeated expected sandbox denials during shell-launch classification"
+  },
+  "noise_control": {
+    "event_fingerprint": "fp_policy_expected_metadata_boundary_shell_launch",
+    "first_seen": "2026-05-04T19:21:58.394000-04:00",
+    "last_seen": "2026-05-04T19:21:58.489000-04:00",
+    "count": 47,
+    "suppressed_count": 43,
+    "coalesce_window_ms": 1000,
+    "sample_evidence_refs": [
+      "ev_kernel_sandbox_deny_metadata",
+      "ev_policy_expected_boundary"
+    ]
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": ["exact_target_path", "raw_command_args"]
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_coalesced_sandbox_denials",
+      "source": "policy-engine",
+      "raw_ref": "rawlog:console-export:19:21:58.394-19:21:58.489",
+      "summary": "Repeated equivalent policy blocks were collapsed into one operator-facing event."
+    },
+    {
+      "evidence_id": "ev_noise_budget_applied",
+      "source": "process-monitor",
+      "raw_ref": null,
+      "summary": "Noise budget preserved representative samples and suppressed duplicate records."
+    }
+  ],
+  "operator_narrative": {
+    "summary": "Repeated expected sandbox denials were coalesced into one low-risk policy event.",
+    "risk": "low",
+    "why": "The blocked operations shared the same actor, target class, policy rule, and expected outcome; repetition did not change risk.",
+    "next_action": "No action required unless the count exceeds the component noise budget or the semantic outcome changes.",
+    "drilldown_refs": ["ev_coalesced_sandbox_denials", "ev_noise_budget_applied"]
+  },
+  "sync": {
+    "replication_policy": "local_only",
+    "retention_class": "standard",
+    "exportable": false
+  }
+}
