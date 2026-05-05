@@ -1,0 +1,18 @@
+{
+  "schema": "sourceos.schema-record/v1alpha1",
+  "schema_id": "schema:source-object:v1",
+  "object_type": "source_object",
+  "schema_version": "v1",
+  "required_fields": ["object_id", "object_type", "profile_id", "workspace_id"],
+  "field_owners": {
+    "object_id": "sourceos-syncd",
+    "object_type": "sourceos-syncd",
+    "profile_id": "policy-fabric",
+    "workspace_id": "sociosphere"
+  },
+  "migration_policy": "forward_compatible_required",
+  "conflict_policy": "object_type_specific",
+  "tombstone_policy": "preserve_until_retention_allows_purge",
+  "sync_visibility": "workspace",
+  "retention_class": "normal"
+}
