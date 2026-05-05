@@ -1,0 +1,286 @@
+{
+  "schema": "sourceos.state-integrity-report/v1alpha1",
+  "generated_at": "2026-05-04T17:15:17Z",
+  "identity": {
+    "component": "sourceos-syncd",
+    "repo": "SourceOS-Linux/sourceos-syncd",
+    "pid": 675,
+    "process_name": "sourceos-syncd",
+    "node_id_hash": "sha256:example-local-node",
+    "boot_id": "example-boot-id",
+    "version": "0.1.0",
+    "commit": "example",
+    "build_provenance": "local-dev",
+    "platform": "linux",
+    "service_manager": "systemd"
+  },
+  "collection": {
+    "status": "partial",
+    "duration_ms": 31,
+    "errors": [],
+    "redacted_fields": [
+      "lanes.secure.samples"
+    ],
+    "permission_denied_fields": [],
+    "timed_out_fields": [
+      "remote_replication_peers"
+    ],
+    "unavailable_fields": []
+  },
+  "runtime": {
+    "process_started_at": "2026-05-04T12:00:00Z",
+    "runtime_ready_at": "2026-05-04T12:00:03Z",
+    "store_opened_at": "2026-05-04T12:00:04Z",
+    "replay_started_at": "2026-05-04T12:00:04Z",
+    "replay_completed_at": null,
+    "first_heartbeat_at": "2026-05-04T12:00:08Z",
+    "last_heartbeat_at": "2026-05-04T13:10:38Z",
+    "last_clean_shutdown_at": "2026-05-03T14:47:37Z",
+    "last_dirty_open_at": "2026-05-04T12:00:04Z"
+  },
+  "stores": [
+    {
+      "name": "content-store-a",
+      "role": "active",
+      "backend": "sqlite",
+      "schema_version": "1.0.0",
+      "created_by_version": "0.1.0",
+      "runtime_version": "0.1.1",
+      "previous_runtime_version": "0.1.0",
+      "migration_state": "lazy",
+      "active_generation": 42,
+      "last_known_good_generation": 41,
+      "shadow_present": true,
+      "manifest_present": true,
+      "checksum_state": "unverified",
+      "flags_raw": 100664130,
+      "flags_hex": "0x6000342",
+      "flags_decoded": [
+        "LANE_CONTENT",
+        "LANE_USER_VISIBLE",
+        "STORE_JOURNALED",
+        "STORE_SHADOWED",
+        "COMPACTION_ENABLED"
+      ],
+      "unknown_flags": []
+    }
+  ],
+  "lanes": [
+    {
+      "name": "normal",
+      "status": "degraded",
+      "sla": {
+        "max_heartbeat_age_ms": 30000,
+        "max_replay_lag_events": 100,
+        "max_replay_lag_ms": 10000
+      },
+      "objects": {
+        "total": 32695,
+        "tombstones": 165,
+        "orphans": 2,
+        "corrupted": 0,
+        "encrypted": 0,
+        "redacted": 0
+      },
+      "journal": {
+        "segment_count": 21,
+        "total_bytes": 8388608,
+        "max_segment_bytes": 2097152,
+        "oldest_unapplied_event_age_ms": 912000,
+        "replay_lag_events": 843,
+        "replay_lag_bytes": 3145728,
+        "replay_throughput_events_per_sec": 500,
+        "replay_eta_ms": 1686,
+        "checksum_state": "verified"
+      },
+      "maintenance": {
+        "last_compact_started_at": "2026-05-03T14:47:04Z",
+        "last_compact_completed_at": "2026-05-03T14:47:38Z",
+        "last_compact_duration_ms": 34000,
+        "compaction_debt": "moderate",
+        "last_purge_started_at": "2026-03-15T09:00:00Z",
+        "last_purge_completed_at": "2026-03-15T09:00:02Z",
+        "purge_debt": "moderate",
+        "last_repair_at": null,
+        "repair_debt": "low"
+      }
+    },
+    {
+      "name": "priority",
+      "status": "active",
+      "sla": {
+        "max_heartbeat_age_ms": 30000,
+        "max_replay_lag_events": 0,
+        "max_replay_lag_ms": 1000
+      },
+      "objects": {
+        "total": 4813,
+        "tombstones": 28,
+        "orphans": 0,
+        "corrupted": 0,
+        "encrypted": 0,
+        "redacted": 0
+      },
+      "journal": {
+        "segment_count": 3,
+        "total_bytes": 1340,
+        "max_segment_bytes": 1340,
+        "oldest_unapplied_event_age_ms": 0,
+        "replay_lag_events": 0,
+        "replay_lag_bytes": 0,
+        "replay_throughput_events_per_sec": 900,
+        "replay_eta_ms": 0,
+        "checksum_state": "verified"
+      },
+      "maintenance": {
+        "last_compact_started_at": "2026-05-03T14:47:07Z",
+        "last_compact_completed_at": "2026-05-03T14:47:28Z",
+        "last_compact_duration_ms": 21000,
+        "compaction_debt": "none",
+        "last_purge_started_at": "2026-03-15T09:00:00Z",
+        "last_purge_completed_at": "2026-03-15T09:00:02Z",
+        "purge_debt": "low",
+        "last_repair_at": null,
+        "repair_debt": "none"
+      }
+    }
+  ],
+  "pipeline": {
+    "add": {
+      "external_requested": 1151,
+      "internal_generated": 2,
+      "accepted": 1153,
+      "journaled": 1153,
+      "applied": 1110,
+      "deduped": 0,
+      "replayed": 0,
+      "skipped": 0,
+      "failed": 0
+    },
+    "update": {
+      "external_requested": 3706,
+      "internal_generated": 2214,
+      "accepted": 5920,
+      "journaled": 3706,
+      "applied": 5077,
+      "deduped": 0,
+      "replayed": 1371,
+      "skipped": 0,
+      "failed": 0
+    },
+    "delete": {
+      "external_requested": 193,
+      "authorized": 193,
+      "tombstoned": 193,
+      "journaled": 360,
+      "propagated": 180,
+      "purged": 0,
+      "failed": 0
+    }
+  },
+  "resources": {
+    "disk": {
+      "filesystem": "btrfs",
+      "free_bytes": 12400000000,
+      "total_bytes": 148315832320,
+      "free_ratio": 0.084,
+      "pressure": "warning"
+    },
+    "memory": {
+      "total_gb": 8,
+      "budget_mb": 256,
+      "pressure": "watch"
+    }
+  },
+  "policy": {
+    "policy_engine": "policy-fabric",
+    "policy_version": "example",
+    "indexing_policy": "sourceos.index/default",
+    "retention_policy": "sourceos.retention/local-first-default",
+    "replication_policy": "sourceos.replication/local-only",
+    "agent_access_policy": "sourceos.agent/trust-gated",
+    "policy_decisions": {
+      "allowed": 1844,
+      "denied": 142,
+      "redacted": 19,
+      "deferred": 8
+    }
+  },
+  "invariants": [
+    {
+      "id": "journal.no_unapplied_events_when_ready",
+      "status": "fail",
+      "severity": "error",
+      "evidence": {
+        "replay_lag_events": 843
+      },
+      "remediation": "run_replay"
+    },
+    {
+      "id": "store.shadow_matches_active_generation",
+      "status": "warn",
+      "severity": "warning",
+      "evidence": {
+        "active_generation": 42,
+        "last_known_good_generation": 41
+      },
+      "remediation": "verify_or_rebuild_shadow"
+    },
+    {
+      "id": "heartbeat.within_sla",
+      "status": "fail",
+      "severity": "error",
+      "evidence": {
+        "age_ms": 14679000,
+        "max_heartbeat_age_ms": 30000
+      },
+      "remediation": "restart_or_mark_stale"
+    }
+  ],
+  "diagnosis": {
+    "status": "degraded",
+    "severity": "error",
+    "summary": "Normal lane has replay lag, stale heartbeat, disk-pressure warning, and moderate compaction debt. Priority lane remains usable.",
+    "causes": [
+      "journal.replay_lag_above_sla",
+      "heartbeat.stale",
+      "disk.pressure_warning",
+      "store.shadow_unverified"
+    ],
+    "affected_lanes": [
+      "normal"
+    ],
+    "affected_domains": [
+      "repo-index",
+      "agent-memory"
+    ],
+    "safe_actions": [
+      "run_replay",
+      "compact_normal_lane",
+      "purge_preview",
+      "verify_shadow"
+    ],
+    "blocked_actions": [
+      "destructive_purge_without_policy_grant",
+      "agent_action_requiring_fresh_normal_lane"
+    ]
+  },
+  "controls": [
+    {
+      "id": "normal_lane_replay",
+      "trigger": "journal.replay_lag_above_sla",
+      "action": "run_replay",
+      "mode": "automatic_allowed"
+    },
+    {
+      "id": "disk_pressure_purge_preview",
+      "trigger": "disk.pressure_warning",
+      "action": "purge_preview",
+      "mode": "manual_approval_required"
+    }
+  ],
+  "attestation": {
+    "signed": false,
+    "reason": "local-development-example"
+  }
+}
