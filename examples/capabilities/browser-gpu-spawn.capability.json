@@ -1,0 +1,15 @@
+{
+  "schema_version": "sourceos.capability.v0.1",
+  "capability": "browser.gpu.spawn",
+  "class": "browser",
+  "description": "Allows a browser product to spawn a constrained GPU helper process with no ambient clipboard, TCC, LaunchServices mutation, analytics, or cloud-sync authority.",
+  "default_decision": "allow",
+  "audit": "on_use",
+  "privacy_impact": "low",
+  "requires_user_consent": false,
+  "compatible_authority_domains": [
+    "app",
+    "sandbox"
+  ],
+  "remediation": "If denied unexpectedly, verify the browser helper topology and product launch manifest."
+}
