@@ -1,0 +1,46 @@
+{
+  "schema_version": "sourceos.event.v0.1",
+  "event_id": "evt_invalid_policy_missing_decision",
+  "event_class": "policy.decision",
+  "lane": "policy",
+  "severity": "notice",
+  "outcome": "blocked_expected",
+  "created_at": "2026-05-04T19:21:58.394000-04:00",
+  "host": {
+    "host_id": "host_local_pseudonym",
+    "platform": "sourceos",
+    "privacy_zone": "user_private"
+  },
+  "actor": {
+    "actor_id": "actor_policy_engine",
+    "actor_type": "policy_engine",
+    "display_name": "policy engine"
+  },
+  "causality": {
+    "root_event_id": "evt_invalid_policy_missing_decision",
+    "span_id": "span_invalid",
+    "trace_id": "trace_invalid"
+  },
+  "subject": {
+    "type": "policy",
+    "id": "policy_test",
+    "display": "test policy"
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": []
+  },
+  "evidence": [],
+  "operator_narrative": {
+    "summary": "Invalid policy decision fixture.",
+    "risk": "low",
+    "why": "Policy decision events must include a decision object.",
+    "next_action": "Reject event."
+  },
+  "sync": {
+    "replication_policy": "local_only",
+    "retention_class": "standard",
+    "exportable": false
+  }
+}
