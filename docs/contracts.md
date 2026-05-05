@@ -2,9 +2,9 @@
 
 Canonical architecture: `SourceOS-Linux/sourceos-spec/docs/architecture/sourceos-state-integrity-layer.md`
 
-This repository implements the first executable contract for SourceOS State Integrity. The current implementation lane is Python and standard-library-first. It provides State Integrity Report generation, diagnosis, verification, and non-destructive repair planning.
+This repository implements the first executable contract for SourceOS State Integrity. The current implementation lane is Python and standard-library-first. It provides State Integrity Report generation, diagnosis, verification, non-destructive repair planning, a filesystem-backed local store prototype, an append-only JSONL event log, and registry persistence for early actor/schema/object/profile/device state.
 
-The next daemon phases should extend this baseline into actor, schema, object, event-log, policy, profile, and repair subsystems without breaking the current JSON report contracts.
+The next daemon phases should extend this baseline into full actor, schema, object, event-log, policy, profile, and repair subsystems without breaking the current JSON report contracts.
 
 ## Contract Principles
 
@@ -15,6 +15,7 @@ The next daemon phases should extend this baseline into actor, schema, object, e
 - Policy denials, conflicts, transport failures, degraded indexes, and repair-needed states must not collapse into generic errors.
 - Agent writes must eventually be attributable to registered actors.
 - Downstream surfaces should consume reports/events, not scrape raw daemon logs.
+- Read paths must not silently initialize, reset, or repair local state.
 
 ## Current CLI Commands
 
@@ -23,12 +24,90 @@ The current repo implementation exposes:
 ```bash
 sourceos-syncd health snapshot
 sourceos-syncd health snapshot --compact
+sourceos-syncd health snapshot --store-root ./state --compact
 sourceos-syncd health explain --file examples/health/healthy.snapshot.json
 sourceos-syncd health verify --file examples/health/healthy.snapshot.json
 sourceos-syncd repair plan --file examples/health/degraded.snapshot.json
 ```
 
 The current commands are intentionally read-only or preview-only. `repair plan` emits a plan; it does not mutate state.
+
+## Local Store CLI Commands
+
+The filesystem-backed prototype adds explicit store commands:
+
+```bash
+sourceos-syncd store init --root ./state
+sourceos-syncd store record --root ./state --event-type add --lane normal --object-id object:alpha --producer manual --payload-json '{}'
+sourceos-syncd store put-record --root ./state --kind actors --record-id actor:agent-one --record-json '{"actor_id":"actor:agent-one","actor_type":"agent"}'
+sourceos-syncd store get-record --root ./state --kind actors --record-id actor:agent-one
+sourceos-syncd store list-records --root ./state --kind actors
+```
+
+Supported registry kinds:
+
+- `profiles`
+- `devices`
+- `actors`
+- `schemas`
+- `objects`
+- `indexes`
+- `repair-reports`
+
+## Local Store Layout
+
+The MVP filesystem store uses this layout:
+
+```text
+<store-root>/
+  manifest.json
+  journal.jsonl
+  profiles/
+  devices/
+  actors/
+  schemas/
+  objects/
+  events/
+  repair-reports/
+  indexes/
+  checkpoints/
+  tmp/
+```
+
+Durable directories:
+
+- `profiles`
+- `devices`
+- `actors`
+- `schemas`
+- `objects`
+- `events`
+- `repair-reports`
+
+Rebuildable directories:
+
+- `indexes`
+- `checkpoints`
+
+Disposable directories:
+
+- `tmp`
+
+## Current Registry Record Schemas
+
+Registry writes assign default schemas when a record does not already provide one:
+
+```text
+profiles       -> sourceos.profile-record/v1alpha1
+devices        -> sourceos.device-record/v1alpha1
+actors         -> sourceos.actor-record/v1alpha1
+schemas        -> sourceos.schema-record/v1alpha1
+objects        -> sourceos.object-record/v1alpha1
+indexes        -> sourceos.index-record/v1alpha1
+repair-reports -> sourceos.repair-report/v1alpha1
+```
+
+Registry records are JSON objects written atomically as individual files. The MVP intentionally avoids opaque database behavior until the contract is stable.
 
 ## Intended CLI Commands
 
@@ -83,16 +162,19 @@ The current Python implementation defines these contract families:
 - diagnosis
 - controls
 - attestation
+- local store metadata
+- append-only journal events
+- registry records
 
 ## Next Model Families
 
 The next implementation phase should add first-class contracts for:
 
-- actor records
+- richer actor records
 - source objects
 - schema contracts
 - sync plans
-- conflicts
+- conflict records
 - policy decisions
 - canonical integrity events
 - repair reports tied to durable/rebuildable/disposable state
@@ -101,14 +183,14 @@ The next implementation phase should add first-class contracts for:
 
 ## MVP Persistence Boundary
 
-The next implementation phase should add persistence in this order:
+The next implementation phase should deepen persistence in this order:
 
-1. local config/profile/device discovery
-2. local append-only event log
-3. actor registry
-4. schema registry
-5. object registry
-6. derived index classification
+1. formal local config/profile/device discovery
+2. stronger append-only event log checksums
+3. actor registry validation
+4. schema registry validation and migrations
+5. object registry validation
+6. derived index classification and rebuild reports
 7. dry-run repair of a derived index
 8. policy decision adapter
 9. workspace/file object adapter
