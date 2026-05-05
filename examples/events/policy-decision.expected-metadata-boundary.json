@@ -1,0 +1,75 @@
+{
+  "schema_version": "sourceos.event.v0.1",
+  "event_id": "evt_policy_expected_metadata_boundary_20260504_192158",
+  "event_class": "policy.decision",
+  "lane": "policy",
+  "severity": "notice",
+  "outcome": "blocked_expected",
+  "created_at": "2026-05-04T19:21:58.394000-04:00",
+  "observed_at_monotonic_ns": 1635333177614,
+  "host": {
+    "host_id": "host_local_pseudonym",
+    "platform": "sourceos-darwin-compatible",
+    "kernel": "darwin-family",
+    "privacy_zone": "user_private"
+  },
+  "actor": {
+    "actor_id": "actor_internal_telemetry_component",
+    "actor_type": "service",
+    "display_name": "internal telemetry component",
+    "uid": "system-service",
+    "session_id": null
+  },
+  "causality": {
+    "parent_event_id": "evt_shell_launch_20260504_192158",
+    "root_event_id": "evt_shell_launch_20260504_192158",
+    "span_id": "span_policy_metadata_boundary",
+    "trace_id": "trace_shell_launch_20260504_192158"
+  },
+  "subject": {
+    "type": "file",
+    "id": "target_package_binary_directory",
+    "display": "package-managed executable directory"
+  },
+  "decision": {
+    "decision_id": "dec_expected_metadata_boundary",
+    "policy_bundle": "sourceos.baseline.telemetry",
+    "policy_rule": "telemetry-agent.filesystem.executable-metadata-only",
+    "operation": "file-read-data",
+    "target_class": "package_binary_directory",
+    "result": "deny",
+    "semantic_outcome": "blocked_expected",
+    "explanation_code": "POLICY_EXPECTED_METADATA_BOUNDARY"
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": ["exact_target_path"]
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_kernel_sandbox_deny_metadata",
+      "source": "kernel",
+      "raw_ref": "rawlog:console-export:19:21:58.394",
+      "summary": "Internal component was denied direct file data reads against a package-managed executable path."
+    },
+    {
+      "evidence_id": "ev_policy_expected_boundary",
+      "source": "policy-engine",
+      "raw_ref": null,
+      "summary": "The block matched the expected metadata-boundary rule for telemetry components."
+    }
+  ],
+  "operator_narrative": {
+    "summary": "Internal telemetry component was denied direct executable-directory reads as expected.",
+    "risk": "low",
+    "why": "The component may classify package metadata but does not need direct file-data access to executable directories.",
+    "next_action": "No action required; this is a successful policy boundary.",
+    "drilldown_refs": ["ev_kernel_sandbox_deny_metadata", "ev_policy_expected_boundary"]
+  },
+  "sync": {
+    "replication_policy": "local_only",
+    "retention_class": "standard",
+    "exportable": false
+  }
+}
