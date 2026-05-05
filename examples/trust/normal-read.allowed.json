@@ -1,0 +1,31 @@
+{
+  "schema": "sourceos.agent-trust-decision/v1alpha1",
+  "decision_id": "trust-example-normal-read-allowed",
+  "generated_at": "2026-05-05T00:00:00Z",
+  "engine": "agentplane-local-trust-gate",
+  "subject": "agentplane",
+  "action": "read",
+  "lane": "normal",
+  "status": "allowed",
+  "reason": "state_integrity_allows_agent_action",
+  "report_digest": "sha256:example-report-digest",
+  "report_status": "healthy",
+  "allow_degraded": false,
+  "require_attestation": false,
+  "evidence": {
+    "contract_errors": [],
+    "diagnosis": {
+      "status": "healthy",
+      "severity": "info",
+      "summary": "All required state integrity invariants pass."
+    },
+    "attestation_signed": false,
+    "available_lanes": ["normal"],
+    "policy_counts": {
+      "allowed": 0,
+      "denied": 0,
+      "redacted": 0,
+      "deferred": 0
+    }
+  }
+}
