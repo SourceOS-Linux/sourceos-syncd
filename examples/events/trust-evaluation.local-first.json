@@ -1,0 +1,74 @@
+{
+  "schema_version": "sourceos.event.v0.1",
+  "event_id": "evt_trust_local_first_20260504_192158",
+  "event_class": "trust.evaluation",
+  "lane": "trust",
+  "severity": "info",
+  "outcome": "allowed",
+  "created_at": "2026-05-04T19:21:58.399000-04:00",
+  "observed_at_monotonic_ns": 1635333179000,
+  "host": {
+    "host_id": "host_local_pseudonym",
+    "platform": "sourceos-darwin-compatible",
+    "kernel": "darwin-family",
+    "privacy_zone": "user_private"
+  },
+  "actor": {
+    "actor_id": "actor_trust_engine",
+    "actor_type": "service",
+    "display_name": "local-first trust engine",
+    "uid": "system-service",
+    "session_id": null
+  },
+  "causality": {
+    "parent_event_id": "evt_shell_launch_20260504_192158",
+    "root_event_id": "evt_shell_launch_20260504_192158",
+    "span_id": "span_trust_local_first",
+    "trace_id": "trace_shell_launch_20260504_192158"
+  },
+  "subject": {
+    "type": "process",
+    "id": "proc_package_managed_shell",
+    "display": "package-managed arm64 shell binary"
+  },
+  "trust": {
+    "mode": "local_first",
+    "signature_state": "valid",
+    "package_origin": "package_manager",
+    "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "attestation_state": "verified",
+    "network_lookup": "not_attempted",
+    "degradation_reason": null
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": ["exact_executable_path"]
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_static_code_local",
+      "source": "trust-engine",
+      "raw_ref": "rawlog:console-export:19:21:58.399",
+      "summary": "Executable linkedit and signing metadata were locally inspected."
+    },
+    {
+      "evidence_id": "ev_network_lookup_not_attempted",
+      "source": "policy-engine",
+      "raw_ref": null,
+      "summary": "Network trust lookup was not attempted because local-first verification satisfied baseline policy."
+    }
+  ],
+  "operator_narrative": {
+    "summary": "Package-managed shell passed local-first trust evaluation.",
+    "risk": "low",
+    "why": "The binary was classified as package-managed and locally verified without requiring silent network trust lookup.",
+    "next_action": "No action required.",
+    "drilldown_refs": ["ev_static_code_local", "ev_network_lookup_not_attempted"]
+  },
+  "sync": {
+    "replication_policy": "local_only",
+    "retention_class": "standard",
+    "exportable": false
+  }
+}
