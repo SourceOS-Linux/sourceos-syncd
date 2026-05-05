@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .reports import load_report, pretty_json, repair_plan, snapshot, validate_shape, verify, with_fresh_diagnosis
+from .reports import load_report, pretty_json, repair_plan, snapshot, validate_report, verify, with_fresh_diagnosis
 
 
 def add_compact(parser: argparse.ArgumentParser) -> None:
@@ -40,9 +40,9 @@ def build_parser() -> argparse.ArgumentParser:
     verify_cmd.add_argument("--file", "-f", default="-", help="report JSON file, or '-' for stdin")
     add_compact(verify_cmd)
 
-    repair = subcommands.add_parser("repair", help="non-destructive repair planning")
+    repair = subcommands.add_parser("repair", help="repair planning")
     repair_sub = repair.add_subparsers(dest="command", required=True)
-    plan = repair_sub.add_parser("plan", help="emit a non-destructive repair plan")
+    plan = repair_sub.add_parser("plan", help="emit a repair preview plan")
     plan.add_argument("--file", "-f", default="-", help="report JSON file, or '-' for stdin")
     add_compact(plan)
 
@@ -66,9 +66,9 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.area == "health" and args.command == "verify":
             report = load_report(args.file)
-            shape_errors = validate_shape(report)
+            contract_errors = validate_report(report)
             result = verify(report)
-            output = {"shape_errors": shape_errors, **result}
+            output = {"contract_errors": contract_errors, **result}
             sys.stdout.write(pretty_json(output, pretty=pretty))
             return 0 if result["status"] == "pass" else 2
 
