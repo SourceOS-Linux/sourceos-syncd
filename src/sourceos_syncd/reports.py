@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import socket
 from datetime import datetime, timezone
@@ -35,6 +36,25 @@ REQUIRED_TOP_LEVEL_KEYS = {
     "attestation",
 }
 
+REQUIRED_IDENTITY_KEYS = {"component", "repo", "pid", "process_name", "node_id_hash", "version", "platform", "service_manager"}
+REQUIRED_COLLECTION_KEYS = {"status", "errors", "redacted_fields", "permission_denied_fields", "timed_out_fields", "unavailable_fields"}
+REQUIRED_STORE_KEYS = {"name", "role", "backend", "schema_version", "runtime_version", "migration_state", "checksum_state"}
+REQUIRED_LANE_KEYS = {"name", "status", "sla", "objects", "journal", "maintenance"}
+REQUIRED_INVARIANT_KEYS = {"id", "status", "severity", "evidence", "remediation"}
+REQUIRED_REPAIR_KEYS = {"schema", "generated_at", "source_report", "plan_id", "status", "severity", "summary", "policy", "preconditions", "checkpoint", "steps", "blocked_steps", "rollback", "postconditions"}
+
+COLLECTION_STATUSES = {"complete", "partial", "failed"}
+STORE_ROLES = {"active", "shadow", "migration", "archive", "repair", "retired", "quarantined", "rebuilding"}
+MIGRATION_STATES = {"none", "pending", "lazy", "running", "complete", "failed", "rollback_available"}
+CHECKSUM_STATES = {"verified", "unverified", "mismatch", "unsupported"}
+LANE_STATUSES = {"active", "dormant", "degraded", "repairing", "retired", "unsafe"}
+PRESSURE_STATES = {"none", "watch", "warning", "critical", "unknown"}
+INVARIANT_STATUSES = {"pass", "warn", "fail"}
+SEVERITIES = {"info", "warning", "error", "critical"}
+REPAIR_STATUSES = {"preview", "approved", "running", "complete", "failed", "rolled_back"}
+
+HEX_RE = re.compile(r"^0x[0-9a-fA-F]+$")
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -49,6 +69,14 @@ def parse_instant(value: str | None) -> datetime | None:
         return datetime.fromisoformat(value)
     except ValueError:
         return None
+
+
+def is_nonnegative_int(value: Any) -> bool:
+    return isinstance(value, int) and value >= 0
+
+
+def path_missing_errors(prefix: str, value: dict[str, Any], required: set[str]) -> list[str]:
+    return [f"{prefix}.{key} is required" for key in sorted(required - set(value))]
 
 
 def stable_node_hash() -> str:
@@ -256,6 +284,201 @@ def validate_shape(report: dict[str, Any]) -> list[str]:
     return errors
 
 
+def validate_report(report: dict[str, Any]) -> list[str]:
+    """Validate the State Integrity Report contract without external dependencies."""
+    errors = validate_shape(report)
+    if errors:
+        return errors
+
+    if parse_instant(report.get("generated_at")) is None:
+        errors.append("generated_at must be an ISO-8601 timestamp")
+
+    identity = report.get("identity")
+    if not isinstance(identity, dict):
+        errors.append("identity must be an object")
+    else:
+        errors.extend(path_missing_errors("identity", identity, REQUIRED_IDENTITY_KEYS))
+        if not isinstance(identity.get("pid"), int) or identity.get("pid", -1) < 0:
+            errors.append("identity.pid must be a non-negative integer")
+        if not str(identity.get("node_id_hash", "")).startswith("sha256:"):
+            errors.append("identity.node_id_hash must start with sha256:")
+
+    collection = report.get("collection")
+    if not isinstance(collection, dict):
+        errors.append("collection must be an object")
+    else:
+        errors.extend(path_missing_errors("collection", collection, REQUIRED_COLLECTION_KEYS))
+        if collection.get("status") not in COLLECTION_STATUSES:
+            errors.append("collection.status is invalid")
+        for key in ["errors", "redacted_fields", "permission_denied_fields", "timed_out_fields", "unavailable_fields"]:
+            if not isinstance(collection.get(key), list):
+                errors.append(f"collection.{key} must be a list")
+
+    runtime = report.get("runtime")
+    if not isinstance(runtime, dict):
+        errors.append("runtime must be an object")
+    else:
+        for key, value in runtime.items():
+            if key.endswith("_at") and value is not None and parse_instant(value) is None:
+                errors.append(f"runtime.{key} must be null or an ISO-8601 timestamp")
+
+    stores = report.get("stores")
+    if not isinstance(stores, list):
+        errors.append("stores must be a list")
+    else:
+        seen_stores: set[str] = set()
+        for index, store in enumerate(stores):
+            prefix = f"stores[{index}]"
+            if not isinstance(store, dict):
+                errors.append(f"{prefix} must be an object")
+                continue
+            errors.extend(path_missing_errors(prefix, store, REQUIRED_STORE_KEYS))
+            name = store.get("name")
+            if isinstance(name, str):
+                if name in seen_stores:
+                    errors.append(f"{prefix}.name duplicates store {name!r}")
+                seen_stores.add(name)
+            if store.get("role") not in STORE_ROLES:
+                errors.append(f"{prefix}.role is invalid")
+            if store.get("migration_state") not in MIGRATION_STATES:
+                errors.append(f"{prefix}.migration_state is invalid")
+            if store.get("checksum_state") not in CHECKSUM_STATES:
+                errors.append(f"{prefix}.checksum_state is invalid")
+            if "flags_raw" in store and not is_nonnegative_int(store.get("flags_raw")):
+                errors.append(f"{prefix}.flags_raw must be a non-negative integer")
+            if "flags_hex" in store:
+                hex_value = store.get("flags_hex")
+                if not isinstance(hex_value, str) or not HEX_RE.match(hex_value):
+                    errors.append(f"{prefix}.flags_hex must be a hexadecimal string")
+                elif is_nonnegative_int(store.get("flags_raw")) and int(hex_value, 16) != store.get("flags_raw"):
+                    errors.append(f"{prefix}.flags_hex does not match flags_raw")
+
+    lanes = report.get("lanes")
+    if not isinstance(lanes, list) or not lanes:
+        errors.append("lanes must be a non-empty list")
+    else:
+        seen_lanes: set[str] = set()
+        for index, lane in enumerate(lanes):
+            prefix = f"lanes[{index}]"
+            if not isinstance(lane, dict):
+                errors.append(f"{prefix} must be an object")
+                continue
+            errors.extend(path_missing_errors(prefix, lane, REQUIRED_LANE_KEYS))
+            name = lane.get("name")
+            if isinstance(name, str):
+                if name in seen_lanes:
+                    errors.append(f"{prefix}.name duplicates lane {name!r}")
+                seen_lanes.add(name)
+            if lane.get("status") not in LANE_STATUSES:
+                errors.append(f"{prefix}.status is invalid")
+            for section in ["sla", "objects"]:
+                values = lane.get(section, {})
+                if not isinstance(values, dict):
+                    errors.append(f"{prefix}.{section} must be an object")
+                    continue
+                for key, value in values.items():
+                    if not is_nonnegative_int(value):
+                        errors.append(f"{prefix}.{section}.{key} must be a non-negative integer")
+            journal = lane.get("journal", {})
+            if isinstance(journal, dict):
+                for key in ["segment_count", "total_bytes", "max_segment_bytes", "oldest_unapplied_event_age_ms", "replay_lag_events", "replay_lag_bytes", "replay_eta_ms"]:
+                    if key in journal and not is_nonnegative_int(journal.get(key)):
+                        errors.append(f"{prefix}.journal.{key} must be a non-negative integer")
+            else:
+                errors.append(f"{prefix}.journal must be an object")
+
+    resources = report.get("resources", {})
+    disk = resources.get("disk", {}) if isinstance(resources, dict) else {}
+    if not isinstance(disk, dict):
+        errors.append("resources.disk must be an object")
+    else:
+        total = disk.get("total_bytes")
+        free = disk.get("free_bytes")
+        ratio = disk.get("free_ratio")
+        if not is_nonnegative_int(free):
+            errors.append("resources.disk.free_bytes must be a non-negative integer")
+        if not isinstance(total, int) or total <= 0:
+            errors.append("resources.disk.total_bytes must be a positive integer")
+        if isinstance(free, int) and isinstance(total, int) and total > 0 and free > total:
+            errors.append("resources.disk.free_bytes cannot exceed total_bytes")
+        if not isinstance(ratio, (int, float)) or ratio < 0 or ratio > 1:
+            errors.append("resources.disk.free_ratio must be between 0 and 1")
+        if disk.get("pressure") not in PRESSURE_STATES:
+            errors.append("resources.disk.pressure is invalid")
+
+    policy = report.get("policy")
+    if not isinstance(policy, dict):
+        errors.append("policy must be an object")
+    else:
+        decisions = policy.get("policy_decisions")
+        if not isinstance(decisions, dict):
+            errors.append("policy.policy_decisions must be an object")
+        else:
+            for key, value in decisions.items():
+                if not is_nonnegative_int(value):
+                    errors.append(f"policy.policy_decisions.{key} must be a non-negative integer")
+
+    invariants = report.get("invariants")
+    if not isinstance(invariants, list):
+        errors.append("invariants must be a list")
+    else:
+        for index, invariant in enumerate(invariants):
+            prefix = f"invariants[{index}]"
+            if not isinstance(invariant, dict):
+                errors.append(f"{prefix} must be an object")
+                continue
+            errors.extend(path_missing_errors(prefix, invariant, REQUIRED_INVARIANT_KEYS))
+            if invariant.get("status") not in INVARIANT_STATUSES:
+                errors.append(f"{prefix}.status is invalid")
+            if invariant.get("severity") not in SEVERITIES:
+                errors.append(f"{prefix}.severity is invalid")
+            if not isinstance(invariant.get("evidence"), dict):
+                errors.append(f"{prefix}.evidence must be an object")
+
+    return errors
+
+
+def validate_repair_plan(plan: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    missing = sorted(REQUIRED_REPAIR_KEYS - set(plan))
+    if missing:
+        errors.append(f"missing repair plan keys: {', '.join(missing)}")
+    if plan.get("schema") != REPAIR_SCHEMA:
+        errors.append(f"unsupported repair plan schema: {plan.get('schema')!r}")
+    if parse_instant(plan.get("generated_at")) is None:
+        errors.append("generated_at must be an ISO-8601 timestamp")
+    if plan.get("status") not in REPAIR_STATUSES:
+        errors.append("status is invalid")
+    if plan.get("severity") not in SEVERITIES:
+        errors.append("severity is invalid")
+    policy = plan.get("policy", {})
+    if not isinstance(policy, dict):
+        errors.append("policy must be an object")
+    elif not isinstance(policy.get("destructive_actions_present"), bool):
+        errors.append("policy.destructive_actions_present must be boolean")
+    steps = plan.get("steps")
+    if not isinstance(steps, list) or not steps:
+        errors.append("steps must be a non-empty list")
+    else:
+        expected_order = 1
+        for index, step in enumerate(steps):
+            prefix = f"steps[{index}]"
+            if not isinstance(step, dict):
+                errors.append(f"{prefix} must be an object")
+                continue
+            for key in ["order", "id", "kind", "destructive", "description", "expected_result"]:
+                if key not in step:
+                    errors.append(f"{prefix}.{key} is required")
+            if step.get("order") != expected_order:
+                errors.append(f"{prefix}.order must be {expected_order}")
+            expected_order += 1
+            if not isinstance(step.get("destructive"), bool):
+                errors.append(f"{prefix}.destructive must be boolean")
+        if plan.get("status") == "preview" and any(step.get("destructive") for step in steps if isinstance(step, dict)):
+            errors.append("preview plans cannot include applying mutation steps")
+    return errors
+
+
 def heartbeat_age_ms(report: dict[str, Any]) -> int | None:
     last = parse_instant(report.get("runtime", {}).get("last_heartbeat_at"))
     generated = parse_instant(report.get("generated_at")) or datetime.now(timezone.utc)
@@ -266,17 +489,17 @@ def heartbeat_age_ms(report: dict[str, Any]) -> int | None:
 
 def verify(report: dict[str, Any]) -> dict[str, Any]:
     invariants: list[dict[str, Any]] = []
-    shape_errors = validate_shape(report)
+    validation_errors = validate_report(report)
     invariants.append({
-        "id": "report.shape_valid",
-        "status": "pass" if not shape_errors else "fail",
-        "severity": "info" if not shape_errors else "critical",
-        "evidence": {"errors": shape_errors},
-        "remediation": "fix_report_shape",
+        "id": "report.contract_valid",
+        "status": "pass" if not validation_errors else "fail",
+        "severity": "info" if not validation_errors else "critical",
+        "evidence": {"errors": validation_errors},
+        "remediation": "fix_report_contract",
     })
 
     age = heartbeat_age_ms(report)
-    lane_slas = [lane.get("sla", {}).get("max_heartbeat_age_ms") for lane in report.get("lanes", [])]
+    lane_slas = [lane.get("sla", {}).get("max_heartbeat_age_ms") for lane in report.get("lanes", []) if isinstance(lane, dict)]
     lane_slas = [int(sla) for sla in lane_slas if isinstance(sla, int)]
     max_age = min(lane_slas) if lane_slas else 30000
     invariants.append({
@@ -290,6 +513,8 @@ def verify(report: dict[str, Any]) -> dict[str, Any]:
     total_lag = 0
     allowed_lag = 0
     for lane in report.get("lanes", []):
+        if not isinstance(lane, dict):
+            continue
         total_lag += int(lane.get("journal", {}).get("replay_lag_events") or 0)
         allowed_lag += int(lane.get("sla", {}).get("max_replay_lag_events") or 0)
     invariants.append({
@@ -303,7 +528,7 @@ def verify(report: dict[str, Any]) -> dict[str, Any]:
     shadow_failures = [
         store.get("name", "unknown")
         for store in report.get("stores", [])
-        if store.get("role") == "active" and store.get("shadow_present") and store.get("checksum_state") not in {"verified", "unsupported"}
+        if isinstance(store, dict) and store.get("role") == "active" and store.get("shadow_present") and store.get("checksum_state") not in {"verified", "unsupported"}
     ]
     invariants.append({
         "id": "store.shadow_verified_when_present",
@@ -314,12 +539,12 @@ def verify(report: dict[str, Any]) -> dict[str, Any]:
     })
 
     disk = report.get("resources", {}).get("disk", {})
-    pressure = disk.get("pressure", "unknown")
+    pressure = disk.get("pressure", "unknown") if isinstance(disk, dict) else "unknown"
     invariants.append({
         "id": "resources.disk_pressure_below_critical",
         "status": "pass" if pressure not in {"critical", "unknown"} else "fail",
         "severity": "info" if pressure not in {"critical", "unknown"} else "critical",
-        "evidence": {"pressure": pressure, "free_ratio": disk.get("free_ratio")},
+        "evidence": {"pressure": pressure, "free_ratio": disk.get("free_ratio") if isinstance(disk, dict) else None},
         "remediation": "compact_or_purge_preview",
     })
 
@@ -351,6 +576,8 @@ def diagnose(report: dict[str, Any]) -> dict[str, Any]:
                 safe_actions.append(invariant["remediation"])
 
     for lane in report.get("lanes", []):
+        if not isinstance(lane, dict):
+            continue
         lag = int(lane.get("journal", {}).get("replay_lag_events") or 0)
         allowed = int(lane.get("sla", {}).get("max_replay_lag_events") or 0)
         if lane.get("status") in {"degraded", "repairing", "unsafe"} or lag > allowed:
@@ -437,7 +664,7 @@ def repair_plan(report: dict[str, Any]) -> dict[str, Any]:
     if not steps:
         add_step("no_op", "control", "No repair action is required because state integrity invariants pass.", "System continues normal operation.")
 
-    return {
+    plan = {
         "schema": REPAIR_SCHEMA,
         "generated_at": utc_now(),
         "source_report": {
@@ -470,6 +697,7 @@ def repair_plan(report: dict[str, Any]) -> dict[str, Any]:
             "repair evidence is written when Lampstand is available",
         ],
     }
+    return plan
 
 
 def load_report(path: str | None) -> dict[str, Any]:
