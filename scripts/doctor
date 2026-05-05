@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "sourceos-syncd doctor"
+echo "component: sourceos-syncd"
+echo "trust_surface: TRUST_SURFACE.yaml"
+
+echo
+echo "processes:"
+pgrep -af sourceos-syncd || echo "  none"
+
+echo
+echo "launch services:"
+if command -v launchctl >/dev/null 2>&1; then
+  launchctl list 2>/dev/null | grep -i sourceos-syncd || echo "  no launchctl entries"
+fi
+find "$HOME/Library/LaunchAgents" /Library/LaunchAgents /Library/LaunchDaemons -type f 2>/dev/null | grep -i sourceos-syncd || echo "  no launchd plist files"
+
+echo
+echo "listeners:"
+if command -v lsof >/dev/null 2>&1; then
+  lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | grep -i sourceos-syncd || echo "  no sourceos-syncd listeners"
+else
+  echo "  lsof unavailable"
+fi
+
+echo
+echo "state paths:"
+for p in "$HOME/.local/state/sourceos-syncd" "$HOME/.config/sourceos-syncd" "$HOME/.cache/sourceos-syncd"; do
+  if [ -e "$p" ]; then
+    echo "  exists: $p"
+  else
+    echo "  missing: $p"
+  fi
+done
