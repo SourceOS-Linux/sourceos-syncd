@@ -8,6 +8,15 @@ import sys
 from .reports import load_report, pretty_json, repair_plan, snapshot, validate_shape, verify, with_fresh_diagnosis
 
 
+def add_compact(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="emit compact JSON",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sourceos-syncd",
@@ -20,18 +29,22 @@ def build_parser() -> argparse.ArgumentParser:
     health = subcommands.add_parser("health", help="health snapshot, explain, and verify commands")
     health_sub = health.add_subparsers(dest="command", required=True)
 
-    health_sub.add_parser("snapshot", help="emit a runtime State Integrity Report snapshot")
+    snapshot_cmd = health_sub.add_parser("snapshot", help="emit a runtime State Integrity Report snapshot")
+    add_compact(snapshot_cmd)
 
     explain = health_sub.add_parser("explain", help="explain a State Integrity Report")
     explain.add_argument("--file", "-f", default="-", help="report JSON file, or '-' for stdin")
+    add_compact(explain)
 
     verify_cmd = health_sub.add_parser("verify", help="verify State Integrity Report invariants")
     verify_cmd.add_argument("--file", "-f", default="-", help="report JSON file, or '-' for stdin")
+    add_compact(verify_cmd)
 
     repair = subcommands.add_parser("repair", help="non-destructive repair planning")
     repair_sub = repair.add_subparsers(dest="command", required=True)
     plan = repair_sub.add_parser("plan", help="emit a non-destructive repair plan")
     plan.add_argument("--file", "-f", default="-", help="report JSON file, or '-' for stdin")
+    add_compact(plan)
 
     return parser
 
@@ -39,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    pretty = not args.compact
+    pretty = not getattr(args, "compact", False)
 
     try:
         if args.area == "health" and args.command == "snapshot":
