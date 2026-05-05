@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.state-integrity-report.v1alpha1.schema.json",
+  "title": "SourceOS State Integrity Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "generated_at",
+    "identity",
+    "collection",
+    "runtime",
+    "stores",
+    "lanes",
+    "pipeline",
+    "resources",
+    "policy",
+    "invariants",
+    "diagnosis",
+    "controls",
+    "attestation"
+  ],
+  "properties": {
+    "schema": { "const": "sourceos.state-integrity-report/v1alpha1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["component", "repo", "pid", "process_name", "node_id_hash", "version", "platform", "service_manager"],
+      "properties": {
+        "component": { "type": "string", "minLength": 1 },
+        "repo": { "type": "string", "minLength": 1 },
+        "pid": { "type": "integer", "minimum": 0 },
+        "process_name": { "type": "string", "minLength": 1 },
+        "node_id_hash": { "type": "string", "pattern": "^sha256:" },
+        "boot_id": { "type": ["string", "null"] },
+        "version": { "type": "string", "minLength": 1 },
+        "commit": { "type": ["string", "null"] },
+        "build_provenance": { "type": ["string", "null"] },
+        "platform": { "type": "string", "enum": ["linux", "darwin", "windows", "unknown"] },
+        "service_manager": { "type": "string", "enum": ["systemd", "launchd", "windows-service", "manual", "unknown"] }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "errors", "redacted_fields", "permission_denied_fields", "timed_out_fields", "unavailable_fields"],
+      "properties": {
+        "status": { "type": "string", "enum": ["complete", "partial", "failed"] },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "array", "items": { "type": "string" } },
+        "redacted_fields": { "type": "array", "items": { "type": "string" } },
+        "permission_denied_fields": { "type": "array", "items": { "type": "string" } },
+        "timed_out_fields": { "type": "array", "items": { "type": "string" } },
+        "unavailable_fields": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["process_started_at", "last_heartbeat_at"],
+      "properties": {
+        "process_started_at": { "type": ["string", "null"], "format": "date-time" },
+        "runtime_ready_at": { "type": ["string", "null"], "format": "date-time" },
+        "store_opened_at": { "type": ["string", "null"], "format": "date-time" },
+        "replay_started_at": { "type": ["string", "null"], "format": "date-time" },
+        "replay_completed_at": { "type": ["string", "null"], "format": "date-time" },
+        "first_heartbeat_at": { "type": ["string", "null"], "format": "date-time" },
+        "last_heartbeat_at": { "type": ["string", "null"], "format": "date-time" },
+        "last_clean_shutdown_at": { "type": ["string", "null"], "format": "date-time" },
+        "last_dirty_open_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "stores": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/store" }
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/lane" }
+    },
+    "pipeline": { "type": "object", "additionalProperties": true },
+    "resources": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["disk", "memory"],
+      "properties": {
+        "disk": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["free_bytes", "total_bytes", "free_ratio", "pressure"],
+          "properties": {
+            "filesystem": { "type": "string" },
+            "free_bytes": { "type": "integer", "minimum": 0 },
+            "total_bytes": { "type": "integer", "minimum": 1 },
+            "free_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+            "pressure": { "type": "string", "enum": ["none", "watch", "warning", "critical", "unknown"] }
+          }
+        },
+        "memory": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["policy_engine", "policy_decisions"],
+      "properties": {
+        "policy_engine": { "type": "string", "minLength": 1 },
+        "policy_decisions": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/invariant" }
+    },
+    "diagnosis": { "type": "object", "additionalProperties": true },
+    "controls": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+    "attestation": { "type": "object", "additionalProperties": true }
+  },
+  "$defs": {
+    "store": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["name", "role", "backend", "schema_version", "runtime_version", "migration_state", "checksum_state"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "enum": ["active", "shadow", "migration", "archive", "repair", "retired", "quarantined", "rebuilding"] },
+        "backend": { "type": "string", "minLength": 1 },
+        "schema_version": { "type": "string", "minLength": 1 },
+        "created_by_version": { "type": ["string", "null"] },
+        "runtime_version": { "type": "string", "minLength": 1 },
+        "previous_runtime_version": { "type": ["string", "null"] },
+        "migration_state": { "type": "string", "enum": ["none", "pending", "lazy", "running", "complete", "failed", "rollback_available"] },
+        "active_generation": { "type": "integer", "minimum": 0 },
+        "last_known_good_generation": { "type": "integer", "minimum": 0 },
+        "shadow_present": { "type": "boolean" },
+        "manifest_present": { "type": "boolean" },
+        "checksum_state": { "type": "string", "enum": ["verified", "unverified", "mismatch", "unsupported"] },
+        "flags_raw": { "type": "integer", "minimum": 0 },
+        "flags_hex": { "type": "string", "pattern": "^0x[0-9a-fA-F]+$" },
+        "flags_decoded": { "type": "array", "items": { "type": "string" } },
+        "unknown_flags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "lane": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["name", "status", "sla", "objects", "journal", "maintenance"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["active", "dormant", "degraded", "repairing", "retired", "unsafe"] },
+        "sla": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "objects": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "journal": { "type": "object", "additionalProperties": true },
+        "maintenance": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "invariant": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "status", "severity", "evidence", "remediation"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pass", "warn", "fail"] },
+        "severity": { "type": "string", "enum": ["info", "warning", "error", "critical"] },
+        "evidence": { "type": "object", "additionalProperties": true },
+        "remediation": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
