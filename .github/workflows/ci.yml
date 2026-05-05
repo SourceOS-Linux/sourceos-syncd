@@ -23,6 +23,18 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e . pytest
 
+      - name: Parse schema files
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for path in sorted(Path('schemas').glob('*.schema.json')):
+              data = json.loads(path.read_text())
+              assert data['$schema'] == 'https://json-schema.org/draft/2020-12/schema'
+              assert data['title']
+              print(f'validated {path}')
+          PY
+
       - name: Run tests
         run: pytest -q
 
@@ -32,8 +44,11 @@ jobs:
       - name: Exercise CLI explain
         run: sourceos-syncd health explain --file examples/health/healthy.snapshot.json --compact
 
-      - name: Exercise CLI verify
+      - name: Exercise CLI verify healthy example
         run: sourceos-syncd health verify --file examples/health/healthy.snapshot.json --compact
+
+      - name: Exercise CLI verify degraded example
+        run: sourceos-syncd health verify --file examples/health/degraded.snapshot.json --compact || test $? -eq 2
 
       - name: Exercise repair plan preview
         run: sourceos-syncd repair plan --file examples/health/degraded.snapshot.json --compact > /tmp/sourceos-syncd.repair-plan.json
