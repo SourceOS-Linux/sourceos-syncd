@@ -1,0 +1,13 @@
+{
+  "schema": "sourceos.policy-decision/v1alpha1",
+  "decision_id": "policy-decision:review-alpha",
+  "effect": "review_required",
+  "policy_id": "sourceos.policy/local-object-review",
+  "policy_version": "v1",
+  "actor_id": "actor:agent-one",
+  "object_id": "object:alpha",
+  "profile_id": "profile:local-dev",
+  "workspace_id": "workspace:default",
+  "rationale": "The actor and object are in scope, but human review is required for the MVP fixture.",
+  "decided_at": "2026-05-05T00:06:00Z"
+}
