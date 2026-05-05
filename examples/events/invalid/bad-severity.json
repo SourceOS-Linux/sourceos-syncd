@@ -1,0 +1,46 @@
+{
+  "schema_version": "sourceos.event.v0.1",
+  "event_id": "evt_invalid_bad_severity",
+  "event_class": "process.exec",
+  "lane": "process_lifecycle",
+  "severity": "scary",
+  "outcome": "allowed",
+  "created_at": "2026-05-04T19:21:58.369000-04:00",
+  "host": {
+    "host_id": "host_local_pseudonym",
+    "platform": "sourceos",
+    "privacy_zone": "user_private"
+  },
+  "actor": {
+    "actor_id": "actor_test",
+    "actor_type": "process",
+    "display_name": "test actor"
+  },
+  "causality": {
+    "root_event_id": "evt_invalid_bad_severity",
+    "span_id": "span_invalid",
+    "trace_id": "trace_invalid"
+  },
+  "subject": {
+    "type": "process",
+    "id": "proc_test",
+    "display": "test process"
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": []
+  },
+  "evidence": [],
+  "operator_narrative": {
+    "summary": "Invalid severity fixture.",
+    "risk": "low",
+    "why": "This fixture should fail schema validation.",
+    "next_action": "Reject event."
+  },
+  "sync": {
+    "replication_policy": "local_only",
+    "retention_class": "standard",
+    "exportable": false
+  }
+}
