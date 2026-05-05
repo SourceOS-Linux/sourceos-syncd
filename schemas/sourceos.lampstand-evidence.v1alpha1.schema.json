@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.lampstand-evidence.v1alpha1.schema.json",
+  "title": "SourceOS Lampstand Evidence Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "evidence_id",
+    "generated_at",
+    "writer",
+    "evidence_type",
+    "subject",
+    "artifact_digest",
+    "artifact",
+    "attestation"
+  ],
+  "properties": {
+    "schema": { "const": "sourceos.lampstand-evidence/v1alpha1" },
+    "evidence_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "writer": { "type": "string", "minLength": 1 },
+    "evidence_type": {
+      "type": "string",
+      "enum": [
+        "state-integrity-report",
+        "repair-plan",
+        "policy-decision",
+        "local-state-summary",
+        "agent-trust-decision",
+        "delivery-scorecard"
+      ]
+    },
+    "subject": { "type": "string", "minLength": 1 },
+    "artifact_digest": { "type": "string", "pattern": "^sha256:" },
+    "artifact": { "type": "object", "additionalProperties": true },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["signed", "signature", "reason"],
+      "properties": {
+        "signed": { "type": "boolean" },
+        "signature": { "type": ["object", "null"], "additionalProperties": true },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
