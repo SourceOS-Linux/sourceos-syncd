@@ -1,0 +1,14 @@
+{
+  "schema": "sourceos.integrity-event/v1alpha1",
+  "event_id": "event:object-alpha-created",
+  "event_type": "sync.object.created",
+  "occurred_at": "2026-05-05T00:01:00Z",
+  "summary": "Object alpha was registered in the local State Integrity fixture.",
+  "actor_id": "actor:agent-one",
+  "object_id": "object:alpha",
+  "device_id": "device:local",
+  "profile_id": "profile:local-dev",
+  "workspace_id": "workspace:default",
+  "schema_version": "v1",
+  "policy_decision_ref": "policy-decision:review-alpha"
+}
