@@ -1,0 +1,85 @@
+{
+  "schema_version": "sourceos.event.v0.1",
+  "event_id": "evt_apple_mdm_entitlement_denial_coalesced",
+  "event_class": "telemetry.coalesced",
+  "lane": "policy",
+  "severity": "notice",
+  "outcome": "blocked_expected",
+  "created_at": "2026-05-04T19:30:00-04:00",
+  "observed_at_monotonic_ns": 0,
+  "host": {
+    "host_id": "host_redacted",
+    "platform": "macos-observed",
+    "kernel": "Darwin observed from user logs",
+    "privacy_zone": "user_private"
+  },
+  "actor": {
+    "actor_id": "actor_system_profiler_or_wifi_appex",
+    "actor_type": "process",
+    "display_name": "system_profiler / Wi-Fi.appex",
+    "uid": "0-or-501",
+    "session_id": "session_redacted",
+    "authority_domain": "system-or-user"
+  },
+  "causality": {
+    "parent_event_id": null,
+    "root_event_id": "evt_apple_mdm_entitlement_denial_coalesced",
+    "span_id": "span_mdm_profile_probe",
+    "trace_id": "trace_macos_profile_lookup_noise"
+  },
+  "subject": {
+    "type": "ipc_service",
+    "id": "svc_com_apple_mdmclient_daemon",
+    "display": "com.apple.mdmclient.daemon"
+  },
+  "decision": {
+    "decision_id": "dec_mdm_profile_read_missing_entitlement",
+    "policy_bundle": "apple-observed-entitlement-boundary",
+    "policy_rule": "mdm.profile.system-read.requires-entitlement",
+    "operation": "ipc.lookup.profile-read-system",
+    "target_class": "system_management_profiles",
+    "result": "deny",
+    "semantic_outcome": "blocked_expected",
+    "explanation_code": "POLICY_EXPECTED_ENTITLEMENT_BOUNDARY"
+  },
+  "trust": {
+    "mode": "local_first",
+    "signature_state": "not_applicable",
+    "package_origin": "system",
+    "content_hash": null,
+    "attestation_state": "not_applicable",
+    "network_lookup": "not_attempted"
+  },
+  "noise_control": {
+    "event_fingerprint": "fp_mdmclient_missing_entitlement_get_installed_profiles",
+    "first_seen": "2026-03-16T16:31:39-04:00",
+    "last_seen": "2026-04-04T16:29:56-04:00",
+    "count": 100,
+    "suppressed_count": 96,
+    "coalesce_window_ms": 86400000
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": []
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_mdmclient_denials",
+      "source": "uploaded-macos-log",
+      "raw_ref": "mdmclient missing entitlements; GetInstalledProfiles XPC failures",
+      "summary": "Multiple profile lookup attempts were denied because the caller lacked the required entitlement."
+    }
+  ],
+  "operator_narrative": {
+    "summary": "Profile-management lookups were blocked by an entitlement boundary and coalesced into one expected policy event.",
+    "risk": "low",
+    "why": "The denial indicates the management daemon refused access to callers without the required entitlement. The repetition is operational noise, not by itself compromise evidence.",
+    "next_action": "No action required unless these probes correlate with an unexpected admin session or new profile installation."
+  },
+  "sync": {
+    "replication_policy": "local_only",
+    "retention_class": "forensic",
+    "exportable": false
+  }
+}
