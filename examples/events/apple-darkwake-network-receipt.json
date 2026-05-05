@@ -1,0 +1,85 @@
+{
+  "schema_version": "sourceos.event.v0.1",
+  "event_id": "evt_apple_darkwake_network_receipt_seed",
+  "event_class": "power.wake",
+  "lane": "power",
+  "severity": "info",
+  "outcome": "observed",
+  "created_at": "2026-05-04T00:42:18-04:00",
+  "observed_at_monotonic_ns": 35718602056,
+  "host": {
+    "host_id": "host_redacted",
+    "platform": "macos-observed",
+    "kernel": "Darwin observed from user logs",
+    "privacy_zone": "user_private"
+  },
+  "actor": {
+    "actor_id": "actor_airportd",
+    "actor_type": "service",
+    "display_name": "airportd",
+    "uid": "system",
+    "session_id": null,
+    "authority_domain": "system"
+  },
+  "causality": {
+    "parent_event_id": null,
+    "root_event_id": "evt_apple_darkwake_network_receipt_seed",
+    "span_id": "span_darkwake",
+    "trace_id": "trace_sleep_wake_maintenance"
+  },
+  "subject": {
+    "type": "power_state",
+    "id": "power_darkwake_deep_idle",
+    "display": "DarkWake from Deep Idle"
+  },
+  "decision": {
+    "decision_id": "dec_network_keepalive_allowed",
+    "policy_bundle": "apple-observed-power-policy",
+    "policy_rule": "tcp-keepalive-offload-allowed-on-en0",
+    "operation": "network.keepalive.offload",
+    "target_class": "wifi_en0",
+    "result": "allow",
+    "semantic_outcome": "allowed",
+    "explanation_code": "POWER_DARKWAKE_NETWORK_KEEPALIVE_ALLOWED"
+  },
+  "trust": {
+    "mode": "local_first",
+    "signature_state": "not_applicable",
+    "package_origin": "system",
+    "content_hash": null,
+    "attestation_state": "not_applicable",
+    "network_lookup": "not_attempted"
+  },
+  "noise_control": {
+    "event_fingerprint": "fp_airportd_darkwake_keepalive_en0",
+    "first_seen": "2026-05-04T00:42:18-04:00",
+    "last_seen": "2026-05-04T01:55:20-04:00",
+    "count": 10,
+    "suppressed_count": 8,
+    "coalesce_window_ms": 900000
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": []
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_airport_darkwake",
+      "source": "uploaded-airport-log",
+      "raw_ref": "DarkWake, Deep Idle, TCP keep-alive offload, scan offloads",
+      "summary": "The network stack woke or maintained state while the user-facing machine was asleep."
+    }
+  ],
+  "operator_narrative": {
+    "summary": "The system performed DarkWake network maintenance while the device appeared asleep.",
+    "risk": "low",
+    "why": "Power-state maintenance and TCP keep-alive offload are expected, but SourceOS should expose these as wake receipts rather than burying them in driver logs.",
+    "next_action": "Record wake reason, endpoint when known, beneficiary service, byte counts, duration, and policy authorization."
+  },
+  "sync": {
+    "replication_policy": "local_only",
+    "retention_class": "forensic",
+    "exportable": false
+  }
+}
