@@ -1,0 +1,38 @@
+"""Adapters that project LocalStateStore data into State Integrity Reports."""
+
+from __future__ import annotations
+
+import copy
+from pathlib import Path
+from typing import Any
+
+from .local_store import LocalStateStore
+from .reports import controls_for, diagnose, snapshot, verify
+
+
+def snapshot_from_store(root: str | Path) -> dict[str, Any]:
+    """Build a State Integrity Report from a filesystem-backed local store."""
+    store = LocalStateStore(root)
+    summary = store.summarize()
+    report = snapshot()
+    report["stores"] = summary["stores"]
+    report["lanes"] = summary["lanes"]
+    report["pipeline"] = summary["pipeline"]
+    report["collection"]["status"] = "partial"
+    report["collection"]["unavailable_fields"] = sorted(set(report["collection"].get("unavailable_fields", []) + ["memory.total_gb", "identity.boot_id"]))
+    report["identity"]["store_root"] = str(Path(root).expanduser().resolve())
+    report["diagnosis"] = diagnose(report)
+    report["invariants"] = verify(report)["invariants"]
+    report["controls"] = controls_for(report)
+    report.setdefault("provenance", {})["top_producers"] = copy.deepcopy(summary.get("top_producers", []))
+    return report
+
+
+def init_store(root: str | Path) -> dict[str, Any]:
+    return LocalStateStore(root).init()
+
+
+def append_store_event(root: str | Path, event_type: str, lane: str, object_id: str | None, producer: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    store = LocalStateStore(root)
+    store.init()
+    return store.append_event(event_type=event_type, lane=lane, object_id=object_id, producer=producer, payload=payload)
