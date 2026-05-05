@@ -1,0 +1,13 @@
+{
+  "schema": "sourceos.policy-decision/v1alpha1",
+  "decision_id": "policy-example-secure-agent-access",
+  "generated_at": "2026-05-05T00:00:00Z",
+  "engine": "policy-fabric-local-stub",
+  "action": "agent_access",
+  "lane": "secure",
+  "status": "denied",
+  "reason": "secure_lane_requires_explicit_grant",
+  "subject": "sourceos-syncd",
+  "object_id": null,
+  "data_class": "internal"
+}
