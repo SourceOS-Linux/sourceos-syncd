@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos-service.schema.json",
+  "title": "SourceOS Service Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "service_id",
+    "display_name",
+    "owner",
+    "authority_domain",
+    "lifecycle",
+    "capabilities",
+    "data_classes",
+    "launch_triggers",
+    "resource_budget",
+    "observability"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "sourceos.service.v0.1" },
+    "service_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]+$" },
+    "display_name": { "type": "string" },
+    "description": { "type": "string" },
+    "owner": {
+      "type": "object",
+      "required": ["org", "repo"],
+      "properties": {
+        "org": { "type": "string" },
+        "repo": { "type": "string" },
+        "team": { "type": ["string", "null"] }
+      }
+    },
+    "authority_domain": {
+      "type": "string",
+      "enum": ["system", "user", "session", "app", "container", "sandbox", "compatibility", "agent", "developer"]
+    },
+    "lifecycle": {
+      "type": "object",
+      "required": ["start_mode", "restart_policy"],
+      "properties": {
+        "start_mode": { "type": "string", "enum": ["boot", "demand", "manual", "timer", "socket", "ipc", "agent"] },
+        "restart_policy": { "type": "string", "enum": ["never", "on_failure", "always", "policy"] },
+        "disable_policy": { "type": ["string", "null"] }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["required", "optional", "denied"],
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" } },
+        "optional": { "type": "array", "items": { "type": "string" } },
+        "denied": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "data_classes": { "type": "array", "items": { "type": "string" } },
+    "launch_triggers": { "type": "array", "items": { "type": "string" } },
+    "resource_budget": { "type": "object", "additionalProperties": true },
+    "observability": {
+      "type": "object",
+      "required": ["emits_events", "health_endpoint", "incident_bundle"],
+      "properties": {
+        "emits_events": { "type": "boolean" },
+        "health_endpoint": { "type": ["string", "null"] },
+        "incident_bundle": { "type": "boolean" }
+      }
+    }
+  }
+}
