@@ -1,6 +1,6 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events
+validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -51,3 +51,8 @@ validate-event-store:
 
 validate-events:
 	python3 tools/validate_events.py
+
+validate-identity:
+	python3 tools/sourceos_identity_audit.py \
+		--service examples/services/bearbrowser.service.json \
+		--launch examples/launch/bearbrowser.launch-manifest.json
