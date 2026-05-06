@@ -35,6 +35,12 @@ jobs:
               print(f'validated {path}')
           PY
 
+      - name: Validate control-plane examples
+        run: python3 tools/validate_control_plane_examples.py
+
+      - name: Validate orchestration examples
+        run: python3 tools/validate_orchestration_examples.py
+
       - name: Run tests
         run: pytest -q
 
