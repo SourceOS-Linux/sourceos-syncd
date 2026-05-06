@@ -1,0 +1,7 @@
+{
+  "ready": false,
+  "status": "uninitialized",
+  "severity": "warning",
+  "summary": "Local state store is not initialized.",
+  "generated_at": "2026-05-05T00:00:00Z"
+}
