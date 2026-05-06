@@ -7,6 +7,7 @@
     "pid": 1,
     "process_name": "sourceos-syncd",
     "node_id_hash": "sha256:example",
+    "boot_id": "example-boot-id",
     "version": "0.1.0",
     "platform": "linux",
     "service_manager": "systemd"
@@ -19,12 +20,99 @@
     "timed_out_fields": [],
     "unavailable_fields": []
   },
-  "runtime": {},
-  "stores": [],
-  "lanes": [],
-  "pipeline": {},
-  "resources": {},
-  "policy": {},
+  "runtime": {
+    "process_started_at": "2026-05-05T00:00:00Z",
+    "runtime_ready_at": "2026-05-05T00:00:00Z",
+    "store_opened_at": "2026-05-05T00:00:00Z",
+    "replay_started_at": "2026-05-05T00:00:00Z",
+    "replay_completed_at": "2026-05-05T00:00:00Z",
+    "first_heartbeat_at": "2026-05-05T00:00:00Z",
+    "last_heartbeat_at": "2026-05-05T00:00:00Z",
+    "last_clean_shutdown_at": null,
+    "last_dirty_open_at": null
+  },
+  "stores": [
+    {
+      "name": "content-store-a",
+      "role": "active",
+      "backend": "filesystem-jsonl",
+      "schema_version": "1.0.0",
+      "runtime_version": "0.1.0",
+      "migration_state": "none",
+      "checksum_state": "verified",
+      "flags_raw": 0,
+      "flags_hex": "0x0"
+    }
+  ],
+  "lanes": [
+    {
+      "name": "normal",
+      "status": "active",
+      "sla": {
+        "max_heartbeat_age_ms": 30000,
+        "max_replay_lag_events": 100,
+        "max_replay_lag_ms": 10000
+      },
+      "objects": {
+        "total": 0,
+        "tombstones": 0,
+        "orphans": 0,
+        "corrupted": 0,
+        "encrypted": 0,
+        "redacted": 0
+      },
+      "journal": {
+        "segment_count": 0,
+        "total_bytes": 0,
+        "max_segment_bytes": 0,
+        "oldest_unapplied_event_age_ms": 0,
+        "replay_lag_events": 0,
+        "replay_lag_bytes": 0,
+        "replay_eta_ms": 0,
+        "checksum_state": "verified"
+      },
+      "maintenance": {
+        "last_compact_started_at": null,
+        "last_compact_completed_at": null,
+        "last_compact_duration_ms": null,
+        "compaction_debt": "none",
+        "last_purge_started_at": null,
+        "last_purge_completed_at": null,
+        "purge_debt": "none",
+        "last_repair_at": null,
+        "repair_debt": "none"
+      }
+    }
+  ],
+  "pipeline": {
+    "add": {},
+    "update": {},
+    "delete": {}
+  },
+  "resources": {
+    "disk": {
+      "filesystem": "example",
+      "free_bytes": 1000,
+      "total_bytes": 2000,
+      "free_ratio": 0.5,
+      "pressure": "none"
+    },
+    "memory": {
+      "total_gb": null,
+      "budget_mb": 256,
+      "pressure": "unknown"
+    }
+  },
+  "policy": {
+    "policy_engine": "policy-fabric",
+    "policy_version": "example",
+    "policy_decisions": {
+      "allowed": 0,
+      "denied": 0,
+      "redacted": 0,
+      "deferred": 0
+    }
+  },
   "invariants": [],
   "diagnosis": {
     "status": "healthy",
