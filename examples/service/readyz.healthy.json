@@ -1,0 +1,7 @@
+{
+  "ready": true,
+  "status": "healthy",
+  "severity": "info",
+  "summary": "All required state integrity invariants pass.",
+  "generated_at": "2026-05-05T00:00:00Z"
+}
