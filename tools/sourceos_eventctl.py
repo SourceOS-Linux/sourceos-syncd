@@ -18,13 +18,14 @@ import uuid
 from typing import Any, Iterable
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-EVENT_SCHEMA = ROOT / "schemas" / "sourceos-event.schema.json"
+EVENT_SCHEMA = ROOT / "schemas" / "sourceos.event.v0.1.schema.json"
 DEFAULT_STORE = pathlib.Path(".sourceos/events.jsonl")
 
 try:
-    from jsonschema import Draft202012Validator
+    from jsonschema import Draft202012Validator, FormatChecker
 except Exception:  # pragma: no cover
     Draft202012Validator = None  # type: ignore[assignment]
+    FormatChecker = None  # type: ignore[assignment]
 
 
 def utc_now() -> str:
@@ -45,11 +46,11 @@ def event_summary(event: dict[str, Any]) -> str:
 
 
 def validate_event_obj(event: dict[str, Any]) -> list[str]:
-    if Draft202012Validator is None:
+    if Draft202012Validator is None or FormatChecker is None:
         return ["jsonschema is not installed; run `python3 -m pip install -r requirements-dev.txt`"]
 
     schema = load_json(EVENT_SCHEMA)
-    validator = Draft202012Validator(schema)
+    validator = Draft202012Validator(schema, format_checker=FormatChecker())
     errors = sorted(validator.iter_errors(event), key=lambda item: list(item.absolute_path))
     formatted: list[str] = []
     for error in errors:
@@ -227,11 +228,11 @@ def policy_event(args: argparse.Namespace) -> dict[str, Any]:
         "severity": args.severity,
         "outcome": args.outcome,
         "created_at": now,
-        "observed_at_monotonic_ns": None,
+        "observed_at_monotonic_ns": 0,
         "host": {
             "host_id": args.host_id,
             "platform": "sourceos",
-            "kernel": None,
+            "kernel": "unknown",
             "privacy_zone": "user_private",
         },
         "actor": {
@@ -277,7 +278,7 @@ def policy_event(args: argparse.Namespace) -> dict[str, Any]:
             "last_seen": now,
             "count": 1,
             "suppressed_count": 0,
-            "coalesce_window_ms": 0,
+            "coalesce_window_ms": 1,
         },
         "privacy": {
             "tier": "user_private",
@@ -359,13 +360,13 @@ def parser() -> argparse.ArgumentParser:
     emit.add_argument("--session-id", default=None)
     emit.add_argument("--subject", required=True)
     emit.add_argument("--subject-id", default="subject_local")
-    emit.add_argument("--subject-type", default="ipc_service")
+    emit.add_argument("--subject-type", default="ipc_service", choices=["process", "file", "socket", "ipc_service", "object", "schema", "replica", "policy", "trust_root", "package", "power_state"])
     emit.add_argument("--policy-bundle", default="sourceos.baseline")
     emit.add_argument("--policy-rule", required=True)
     emit.add_argument("--operation", required=True)
     emit.add_argument("--target-class", required=True)
-    emit.add_argument("--result", default="deny", choices=["allow", "deny", "defer", "audit"])
-    emit.add_argument("--outcome", default="blocked_expected", choices=["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed"])
+    emit.add_argument("--result", default="deny", choices=["allow", "deny", "defer", "degrade"])
+    emit.add_argument("--outcome", default="blocked_expected", choices=["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed", "observed"])
     emit.add_argument("--severity", default="notice", choices=["trace", "debug", "info", "notice", "warning", "error", "critical"])
     emit.add_argument("--explanation-code", required=True)
     emit.add_argument("--fingerprint", default="fp_local_policy_decision")
