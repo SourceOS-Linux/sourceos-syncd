@@ -1,0 +1,123 @@
+{
+  "schema_version": "sourceos.orchestration.bundle.v0.1",
+  "contract_version": "sdo.v0.1",
+  "bundle_id": "bundle:fixture:home-assistant-demo:2026-05-05",
+  "data_mode": "fixture",
+  "source_contract": "SocioProphet/prophet-platform/specs/orchestration/orchestration_contract_fixture.py",
+  "adapters": [
+    {
+      "adapter_id": "adapter:home-assistant-fixture",
+      "adapter_family": "home_assistant",
+      "operating_mode": "fixture",
+      "health": "healthy",
+      "credential_boundary": "none",
+      "capabilities": ["device_discovery", "state_observation", "routine_fixture_events"]
+    },
+    {
+      "adapter_id": "adapter:sourceos-local",
+      "adapter_family": "sourceos_shell",
+      "operating_mode": "local",
+      "health": "healthy",
+      "credential_boundary": "system_store",
+      "capabilities": ["local_receipts", "durable_queue", "repair_replay"]
+    }
+  ],
+  "device_nodes": [
+    {
+      "node_id": "node:front-door-camera-01",
+      "display_name": "Front Door Camera",
+      "node_type": "camera",
+      "ecosystem_adapter": "adapter:home-assistant-fixture",
+      "capabilities": ["camera_event_summary", "motion_detection", "package_detection"],
+      "policy_labels": ["camera", "privacy_sensitive", "no_raw_video_default"],
+      "trust_state": "trusted",
+      "revocation_status": "active"
+    },
+    {
+      "node_id": "node:living-room-temp-01",
+      "display_name": "Living Room Temperature Sensor",
+      "node_type": "sensor",
+      "ecosystem_adapter": "adapter:home-assistant-fixture",
+      "capabilities": ["temperature_observation"],
+      "policy_labels": ["sensor", "low_risk"],
+      "trust_state": "trusted",
+      "revocation_status": "active"
+    },
+    {
+      "node_id": "node:living-room-fan-01",
+      "display_name": "Living Room Fan",
+      "node_type": "appliance",
+      "ecosystem_adapter": "adapter:home-assistant-fixture",
+      "capabilities": ["power_toggle", "fan_speed_set"],
+      "policy_labels": ["low_risk_actuation"],
+      "trust_state": "trusted",
+      "revocation_status": "active"
+    },
+    {
+      "node_id": "node:security-system-01",
+      "display_name": "Household Security System",
+      "node_type": "service",
+      "ecosystem_adapter": "adapter:home-assistant-fixture",
+      "capabilities": ["arm_alarm", "disarm_alarm"],
+      "policy_labels": ["security", "high_risk_actuation", "approval_required"],
+      "trust_state": "limited",
+      "revocation_status": "active"
+    }
+  ],
+  "events": [
+    {
+      "event_id": "event:camera:package-delivered",
+      "event_type": "camera_event",
+      "subject_node_id": "node:front-door-camera-01",
+      "actor_id": "node:front-door-camera-01",
+      "adapter_id": "adapter:home-assistant-fixture",
+      "occurred_at": "2026-05-05T18:05:00Z",
+      "confidence": 0.83,
+      "observed_state_after": {"summary": "package delivered", "clip_retained": false},
+      "privacy": {"retention_class": "audit_30d", "redaction_class": "metadata_only", "location_scope": "home"}
+    },
+    {
+      "event_id": "event:sensor:living-room-temp-high",
+      "event_type": "sensor_event",
+      "subject_node_id": "node:living-room-temp-01",
+      "actor_id": "node:living-room-temp-01",
+      "adapter_id": "adapter:home-assistant-fixture",
+      "occurred_at": "2026-05-05T18:05:00Z",
+      "confidence": 0.99,
+      "observed_state_after": {"temperature_f": 78.4},
+      "privacy": {"retention_class": "audit_30d", "redaction_class": "none", "location_scope": "room"}
+    }
+  ],
+  "receipts": [
+    {
+      "receipt_id": "receipt:event:package-delivered",
+      "receipt_type": "event_observed",
+      "event_id": "event:camera:package-delivered",
+      "subject_node_id": "node:front-door-camera-01",
+      "actor_id": "node:front-door-camera-01",
+      "source_adapter_id": "adapter:home-assistant-fixture",
+      "emitted_at": "2026-05-05T18:05:04Z",
+      "capability_used": "observe",
+      "policy_outcome": "redacted",
+      "confidence": 0.83,
+      "lineage_parent_receipt_ids": [],
+      "retention_class": "audit_1y",
+      "redaction_class": "metadata_only"
+    },
+    {
+      "receipt_id": "receipt:event:living-room-temp-high",
+      "receipt_type": "event_observed",
+      "event_id": "event:sensor:living-room-temp-high",
+      "subject_node_id": "node:living-room-temp-01",
+      "actor_id": "node:living-room-temp-01",
+      "source_adapter_id": "adapter:home-assistant-fixture",
+      "emitted_at": "2026-05-05T18:05:04Z",
+      "capability_used": "observe",
+      "policy_outcome": "allowed",
+      "confidence": 0.99,
+      "lineage_parent_receipt_ids": [],
+      "retention_class": "audit_1y",
+      "redaction_class": "none"
+    }
+  ]
+}
