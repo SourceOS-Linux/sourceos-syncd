@@ -1,0 +1,13 @@
+{
+  "schema": "sourceos.agent-object-transaction/v1alpha1",
+  "transaction_id": "agent-txn:alpha-001",
+  "actor_id": "actor:agent-one",
+  "workspace_id": "workspace:default",
+  "profile_id": "profile:local-dev",
+  "object_ids": ["object:alpha"],
+  "operation": "update",
+  "status": "proposed",
+  "policy_decision_ref": "policy-decision:review-alpha",
+  "created_at": "2026-05-05T00:09:00Z",
+  "updated_at": "2026-05-05T00:09:00Z"
+}
