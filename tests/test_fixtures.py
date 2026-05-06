@@ -5,6 +5,7 @@ from pathlib import Path
 
 from sourceos_syncd.evidence import validate_evidence
 from sourceos_syncd.policy import POLICY_DECISION_SCHEMA
+from sourceos_syncd.scorecard import validate_scorecard
 from sourceos_syncd.trust import validate_trust_decision
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,3 +31,9 @@ def test_evidence_fixture_validates_digest():
 def test_trust_fixture_validates():
     decision = load("examples/trust/normal-read.allowed.json")
     assert validate_trust_decision(decision) == []
+
+
+def test_scorecard_fixture_validates():
+    scorecard = load("examples/scorecards/healthy.scorecard.json")
+    assert validate_scorecard(scorecard) == []
+    assert scorecard["status"] == "ready"
