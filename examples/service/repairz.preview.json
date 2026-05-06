@@ -1,0 +1,42 @@
+{
+  "schema": "sourceos.repair-plan/v1alpha1",
+  "generated_at": "2026-05-05T00:00:00Z",
+  "source_report": {
+    "schema": "sourceos.state-integrity-report/v1alpha1",
+    "component": "sourceos-syncd",
+    "generated_at": "2026-05-05T00:00:00Z"
+  },
+  "plan_id": "repair-plan-example",
+  "status": "preview",
+  "severity": "info",
+  "summary": "No repair action is required because state integrity invariants pass.",
+  "policy": {
+    "engine": "policy-fabric",
+    "required_grants": ["sourceos.repair/preview"],
+    "destructive_grants_required": ["sourceos.repair/apply", "sourceos.purge/apply"],
+    "destructive_actions_present": false
+  },
+  "preconditions": [],
+  "checkpoint": {
+    "required": false
+  },
+  "steps": [
+    {
+      "order": 1,
+      "id": "no_op",
+      "kind": "control",
+      "destructive": false,
+      "description": "No repair action is required because state integrity invariants pass.",
+      "expected_result": "System continues normal operation."
+    }
+  ],
+  "blocked_steps": [],
+  "rollback": {
+    "available": true,
+    "strategy": "no-op"
+  },
+  "postconditions": [],
+  "service": {
+    "preview_only": true
+  }
+}
