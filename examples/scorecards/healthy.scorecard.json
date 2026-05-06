@@ -1,0 +1,64 @@
+{
+  "schema": "sourceos.delivery-scorecard/v1alpha1",
+  "scorecard_id": "scorecard-example-healthy",
+  "generated_at": "2026-05-05T00:00:00Z",
+  "engine": "delivery-excellence-local-scorecard",
+  "component": "sourceos-syncd",
+  "status": "ready",
+  "score": 95,
+  "report_digest": "sha256:example-report-digest",
+  "summary": "sourceos-syncd scorecard status=ready score=95 diagnosis=healthy",
+  "dimensions": {
+    "diagnosis": {
+      "status": "healthy",
+      "severity": "info",
+      "summary": "All required state integrity invariants pass."
+    },
+    "contract_errors": [],
+    "invariant_failures": 0,
+    "invariant_warnings": 0,
+    "critical_failures": 0,
+    "lane_statuses": {
+      "normal": "active"
+    },
+    "replay_lag_events": 0,
+    "disk_pressure": "none",
+    "policy_counts": {
+      "allowed": 0,
+      "denied": 0,
+      "redacted": 0,
+      "deferred": 0
+    },
+    "attestation_signed": false
+  },
+  "gates": [
+    {
+      "id": "contract.valid",
+      "status": "pass",
+      "evidence": {
+        "errors": []
+      }
+    },
+    {
+      "id": "diagnosis.not_unsafe",
+      "status": "pass",
+      "evidence": {
+        "diagnosis": "healthy"
+      }
+    },
+    {
+      "id": "critical_invariants.none",
+      "status": "pass",
+      "evidence": {
+        "critical_failures": 0
+      }
+    },
+    {
+      "id": "disk.not_critical",
+      "status": "pass",
+      "evidence": {
+        "pressure": "none"
+      }
+    }
+  ]
+}
