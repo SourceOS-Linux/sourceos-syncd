@@ -1,6 +1,6 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store
+validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -48,3 +48,6 @@ validate-eventctl:
 
 validate-event-store:
 	python3 tools/smoke_event_store.py
+
+validate-events:
+	python3 tools/validate_events.py
