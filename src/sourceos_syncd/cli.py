@@ -8,6 +8,7 @@ import sys
 
 from .evidence import load_json_file, make_evidence, validate_evidence, write_evidence_file
 from .reports import load_report, pretty_json, repair_plan, snapshot, validate_report, verify, with_fresh_diagnosis
+from .scorecard import evaluate_scorecard, validate_scorecard
 from .store_reports import append_store_event, init_store, snapshot_from_store
 from .trust import TrustRequest, evaluate_trust, validate_trust_decision
 
@@ -24,7 +25,7 @@ def add_compact(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sourceos-syncd",
-        description="SourceOS state integrity snapshot, diagnosis, verification, planning, evidence, and trust tools.",
+        description="SourceOS state integrity snapshot, diagnosis, verification, planning, evidence, trust, and scorecard tools.",
     )
     parser.add_argument("--compact", action="store_true", help="emit compact JSON")
 
@@ -102,6 +103,15 @@ def build_parser() -> argparse.ArgumentParser:
     trust_validate = trust_sub.add_parser("validate", help="validate an AgentPlane trust decision")
     trust_validate.add_argument("--file", "-f", required=True, help="trust decision JSON file")
     add_compact(trust_validate)
+
+    scorecard = subcommands.add_parser("scorecard", help="Delivery Excellence scorecards")
+    scorecard_sub = scorecard.add_subparsers(dest="command", required=True)
+    score_eval = scorecard_sub.add_parser("evaluate", help="evaluate a State Integrity Report as a scorecard")
+    score_eval.add_argument("--file", "-f", required=True, help="State Integrity Report JSON file")
+    add_compact(score_eval)
+    score_validate = scorecard_sub.add_parser("validate", help="validate a Delivery Excellence scorecard")
+    score_validate.add_argument("--file", "-f", required=True, help="scorecard JSON file")
+    add_compact(score_validate)
 
     return parser
 
@@ -184,6 +194,18 @@ def main(argv: list[str] | None = None) -> int:
         if args.area == "trust" and args.command == "validate":
             decision = load_json_file(args.file)
             errors = validate_trust_decision(decision)
+            sys.stdout.write(pretty_json({"valid": not errors, "errors": errors}, pretty=pretty))
+            return 0 if not errors else 2
+
+        if args.area == "scorecard" and args.command == "evaluate":
+            report = load_json_file(args.file)
+            scorecard = evaluate_scorecard(report)
+            sys.stdout.write(pretty_json(scorecard, pretty=pretty))
+            return 0 if scorecard["status"] in {"ready", "watch"} else 2
+
+        if args.area == "scorecard" and args.command == "validate":
+            scorecard = load_json_file(args.file)
+            errors = validate_scorecard(scorecard)
             sys.stdout.write(pretty_json({"valid": not errors, "errors": errors}, pretty=pretty))
             return 0 if not errors else 2
 
