@@ -1,6 +1,6 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl
+validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -45,3 +45,6 @@ validate-eventctl:
 		--summary 'Example expected policy boundary was enforced.' \
 		--why 'This smoke test proves generated policy-decision events validate against the canonical schema.' \
 		--next-action 'No action required.' >/dev/null
+
+validate-event-store:
+	python3 tools/smoke_event_store.py
