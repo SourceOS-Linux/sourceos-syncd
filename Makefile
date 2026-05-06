@@ -1,6 +1,9 @@
-.PHONY: validate validate-json validate-control-plane
+.PHONY: validate validate-json validate-schemas validate-control-plane install-dev
 
-validate: validate-json validate-control-plane
+validate: validate-json validate-schemas validate-control-plane
+
+install-dev:
+	python3 -m pip install -r requirements-dev.txt
 
 validate-json:
 	python3 - <<'PY'
@@ -22,6 +25,9 @@ validate-json:
 	    raise SystemExit(1)
 	print('JSON syntax validated.')
 	PY
+
+validate-schemas:
+	python3 tools/validate_json_schemas.py
 
 validate-control-plane:
 	python3 tools/validate_control_plane_examples.py
