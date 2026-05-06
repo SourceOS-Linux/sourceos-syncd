@@ -1,0 +1,15 @@
+# HELP sourceos_syncd_ready SourceOS syncd readiness, 1 when ready.
+# TYPE sourceos_syncd_ready gauge
+sourceos_syncd_ready{status="healthy"} 1
+# HELP sourceos_syncd_initialized Local state initialization status.
+# TYPE sourceos_syncd_initialized gauge
+sourceos_syncd_initialized 1
+# HELP sourceos_syncd_replay_lag_events Total replay lag events across lanes.
+# TYPE sourceos_syncd_replay_lag_events gauge
+sourceos_syncd_replay_lag_events 0
+# HELP sourceos_syncd_corrupted_objects Corrupted object count across lanes.
+# TYPE sourceos_syncd_corrupted_objects gauge
+sourceos_syncd_corrupted_objects 0
+# HELP sourceos_syncd_ready_http_code HTTP code selected by readiness computation.
+# TYPE sourceos_syncd_ready_http_code gauge
+sourceos_syncd_ready_http_code 200
