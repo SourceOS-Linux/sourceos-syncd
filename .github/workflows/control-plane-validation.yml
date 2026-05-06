@@ -17,13 +17,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install validation dependencies
-        run: python3 -m pip install -r requirements-dev.txt
+        run: make install-dev
 
-      - name: Validate JSON syntax
-        run: make validate-json
-
-      - name: Validate JSON Schemas and examples
-        run: make validate-schemas
-
-      - name: Validate control-plane semantic invariants
-        run: make validate-control-plane
+      - name: Validate repository contracts
+        run: make validate
