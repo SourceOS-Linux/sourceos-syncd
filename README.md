@@ -39,13 +39,14 @@ State integrity:
 
 Control plane:
 
+- [`schemas/sourceos.event.v0.1.schema.json`](schemas/sourceos.event.v0.1.schema.json)
 - [`schemas/sourceos-event.schema.json`](schemas/sourceos-event.schema.json)
 - [`schemas/sourceos-service.schema.json`](schemas/sourceos-service.schema.json)
 - [`schemas/sourceos-capability.schema.json`](schemas/sourceos-capability.schema.json)
 - [`schemas/sourceos-launch-manifest.schema.json`](schemas/sourceos-launch-manifest.schema.json)
 - [`schemas/sourceos-incident.schema.json`](schemas/sourceos-incident.schema.json)
 
-The runtime validator is standard-library-only today; the schemas are the canonical external contract for downstream validators, SDKs, dashboards, and cross-repo integrations.
+The runtime validator uses the stricter `sourceos.event.v0.1.schema.json` event schema. The legacy-compatible `sourceos-event.schema.json` remains present for broader downstream schema experiments until the v0.1 schema is fully promoted everywhere.
 
 ## Golden examples
 
@@ -59,6 +60,7 @@ Control plane:
 
 - [`examples/events/apple-mdm-entitlement-denial.coalesced.json`](examples/events/apple-mdm-entitlement-denial.coalesced.json)
 - [`examples/events/apple-darkwake-network-receipt.json`](examples/events/apple-darkwake-network-receipt.json)
+- [`examples/events/invalid/missing-operator-narrative.json`](examples/events/invalid/missing-operator-narrative.json)
 - [`examples/services/bearbrowser.service.json`](examples/services/bearbrowser.service.json)
 - [`examples/capabilities/browser-gpu-spawn.capability.json`](examples/capabilities/browser-gpu-spawn.capability.json)
 - [`examples/launch/bearbrowser.launch-manifest.json`](examples/launch/bearbrowser.launch-manifest.json)
@@ -73,7 +75,7 @@ make install-dev
 make validate
 ```
 
-`make validate` runs JSON syntax checks, full Draft 2020-12 schema validation, semantic control-plane invariants, and `sourceos_eventctl` smoke checks.
+`make validate` runs JSON syntax checks, full Draft 2020-12 schema validation, semantic control-plane invariants, event CLI smoke checks, append-only event-store smoke checks, and strict positive/negative event-fixture tests.
 
 The bootstrap validator remains standard-library-only:
 
@@ -83,7 +85,7 @@ python3 tools/validate_control_plane_examples.py
 
 ## Event control CLI seed
 
-`tools/sourceos_eventctl.py` is the first runtime-facing CLI surface for canonical events. It can validate event JSON, print an operator narrative, and emit a minimal policy-decision event.
+`tools/sourceos_eventctl.py` is the first runtime-facing CLI surface for canonical events. It validates event JSON against the strict v0.1 event schema, prints an operator narrative, emits a minimal policy-decision event, and maintains a local append-only JSONL event store.
 
 ```bash
 python3 tools/sourceos_eventctl.py validate examples/events/apple-mdm-entitlement-denial.coalesced.json
@@ -100,7 +102,39 @@ python3 tools/sourceos_eventctl.py emit-policy-decision \
   --next-action 'No action required.'
 ```
 
-The CLI is intentionally small. It is a seed for the eventual `sourceos events validate`, `sourceos events explain`, and `sourceos events emit` commands.
+Append-only local event store commands:
+
+```bash
+python3 tools/sourceos_eventctl.py write examples/events/apple-mdm-entitlement-denial.coalesced.json --store .sourceos/events.jsonl
+python3 tools/sourceos_eventctl.py emit-policy-decision \
+  --actor sourceos-policy-engine \
+  --subject com.example.target \
+  --policy-rule sourceos.example.deny \
+  --operation ipc.lookup.example \
+  --target-class example_ipc_service \
+  --explanation-code POLICY_EXPECTED_TEST_BOUNDARY \
+  --summary 'Example expected policy boundary was enforced.' \
+  --why 'Generated policy-decision events validate against the canonical schema.' \
+  --next-action 'No action required.' \
+  --store .sourceos/events.jsonl
+python3 tools/sourceos_eventctl.py list --store .sourceos/events.jsonl
+python3 tools/sourceos_eventctl.py show evt_apple_mdm_entitlement_denial_coalesced --store .sourceos/events.jsonl
+python3 tools/sourceos_eventctl.py verify-store --store .sourceos/events.jsonl --fail-empty
+```
+
+The CLI is intentionally small. It is a seed for the eventual `sourceos events validate`, `sourceos events explain`, `sourceos events emit`, and `sourceos events store` commands.
+
+## Product identity audit seed
+
+`tools/sourceos_identity_audit.py` compares a service manifest with a hermetic launch manifest and checks product identity invariants. It is designed to catch BearBrowser-style upstream identity leakage before release.
+
+```bash
+python3 tools/sourceos_identity_audit.py \
+  --service examples/services/bearbrowser.service.json \
+  --launch examples/launch/bearbrowser.launch-manifest.json
+```
+
+The audit checks display name alignment, bundle identity, process identity, dock/menu/crash/helper naming, duplicate PATH entries, shell environment inheritance, denied pollution variables, and `identity.product.upstream_leak` denial.
 
 ## Intended CLI contract
 
