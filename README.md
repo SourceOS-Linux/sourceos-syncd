@@ -66,13 +66,41 @@ Control plane:
 
 ## Validation
 
-Bootstrap control-plane validation uses only Python standard-library checks:
+Install development validators and run the full local gate:
+
+```bash
+make install-dev
+make validate
+```
+
+`make validate` runs JSON syntax checks, full Draft 2020-12 schema validation, semantic control-plane invariants, and `sourceos_eventctl` smoke checks.
+
+The bootstrap validator remains standard-library-only:
 
 ```bash
 python3 tools/validate_control_plane_examples.py
 ```
 
-This validator is intentionally narrower than a full JSON Schema validator. It enforces schema-version alignment, controlled vocabulary basics, required operator narrative fields, causality fields, service capability lists, and the invariant that expected policy blocks do not render as warning/error by default.
+## Event control CLI seed
+
+`tools/sourceos_eventctl.py` is the first runtime-facing CLI surface for canonical events. It can validate event JSON, print an operator narrative, and emit a minimal policy-decision event.
+
+```bash
+python3 tools/sourceos_eventctl.py validate examples/events/apple-mdm-entitlement-denial.coalesced.json
+python3 tools/sourceos_eventctl.py explain examples/events/apple-darkwake-network-receipt.json
+python3 tools/sourceos_eventctl.py emit-policy-decision \
+  --actor sourceos-policy-engine \
+  --subject com.example.target \
+  --policy-rule sourceos.example.deny \
+  --operation ipc.lookup.example \
+  --target-class example_ipc_service \
+  --explanation-code POLICY_EXPECTED_TEST_BOUNDARY \
+  --summary 'Example expected policy boundary was enforced.' \
+  --why 'Generated policy-decision events validate against the canonical schema.' \
+  --next-action 'No action required.'
+```
+
+The CLI is intentionally small. It is a seed for the eventual `sourceos events validate`, `sourceos events explain`, and `sourceos events emit` commands.
 
 ## Intended CLI contract
 
@@ -166,4 +194,4 @@ A SourceOS service or product is not release-ready unless:
 
 The first implementation should produce and validate the golden examples, then expose `health snapshot`, `health explain`, `repair plan`, `events explain`, `events coalesce`, and `events verify` without destructive `repair apply`.
 
-The control-plane extension adds one immediate next target: turn `tools/validate_control_plane_examples.py` into a CI gate, then replace the bootstrap checks with full JSON Schema validation once a dependency policy is selected.
+The control-plane extension adds one immediate next target: promote `tools/sourceos_eventctl.py` into the repo-level `sourceos events` command shape and connect event emission to `sourceos-syncd` runtime state.
