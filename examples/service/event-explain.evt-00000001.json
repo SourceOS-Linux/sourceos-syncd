@@ -1,0 +1,8 @@
+{
+  "event_id": "evt-00000001",
+  "event_type": "add",
+  "summary": "Event evt-00000001 recorded add on lane normal.",
+  "actor_or_producer": "pytest",
+  "object_id": "object:alpha",
+  "created_at": "2026-05-05T00:01:00Z"
+}
