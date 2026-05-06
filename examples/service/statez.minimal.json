@@ -1,0 +1,39 @@
+{
+  "schema": "sourceos.state-integrity-report/v1alpha1",
+  "generated_at": "2026-05-05T00:00:00Z",
+  "identity": {
+    "component": "sourceos-syncd",
+    "repo": "SourceOS-Linux/sourceos-syncd",
+    "pid": 1,
+    "process_name": "sourceos-syncd",
+    "node_id_hash": "sha256:example",
+    "version": "0.1.0",
+    "platform": "linux",
+    "service_manager": "systemd"
+  },
+  "collection": {
+    "status": "partial",
+    "errors": [],
+    "redacted_fields": [],
+    "permission_denied_fields": [],
+    "timed_out_fields": [],
+    "unavailable_fields": []
+  },
+  "runtime": {},
+  "stores": [],
+  "lanes": [],
+  "pipeline": {},
+  "resources": {},
+  "policy": {},
+  "invariants": [],
+  "diagnosis": {
+    "status": "healthy",
+    "severity": "info",
+    "summary": "All required state integrity invariants pass."
+  },
+  "controls": [],
+  "attestation": {
+    "signed": false,
+    "reason": "example"
+  }
+}
