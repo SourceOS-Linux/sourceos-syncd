@@ -1,0 +1,17 @@
+{
+  "events": [
+    {
+      "schema": "sourceos.journal-event/v1alpha1",
+      "event_id": "evt-00000001",
+      "event_type": "add",
+      "lane": "normal",
+      "object_id": "object:alpha",
+      "producer": "pytest",
+      "created_at": "2026-05-05T00:01:00Z",
+      "payload": {
+        "path": "README.md"
+      },
+      "applied": true
+    }
+  ]
+}
