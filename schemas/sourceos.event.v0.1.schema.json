@@ -93,6 +93,10 @@
         },
         "session_id": {
           "type": ["string", "null"]
+        },
+        "authority_domain": {
+          "type": ["string", "null"],
+          "description": "Optional coarse authority domain, such as user, system, kernel, agent, or service-specific authority."
         }
       }
     },
@@ -125,7 +129,7 @@
       "required": ["type", "id", "display"],
       "properties": {
         "type": {
-          "enum": ["process", "file", "socket", "ipc_service", "object", "schema", "replica", "policy", "trust_root", "package"]
+          "enum": ["process", "file", "socket", "ipc_service", "object", "schema", "replica", "policy", "trust_root", "package", "power_state"]
         },
         "id": {
           "type": "string",
@@ -177,7 +181,21 @@
             "minLength": 1
           },
           "source": {
-            "enum": ["kernel", "policy-engine", "trust-engine", "package-db", "process-monitor", "sync-engine", "operator", "agent", "raw-log"]
+            "enum": [
+              "kernel",
+              "policy-engine",
+              "trust-engine",
+              "package-db",
+              "process-monitor",
+              "sync-engine",
+              "operator",
+              "agent",
+              "raw-log",
+              "uploaded-macos-log",
+              "uploaded-airport-log",
+              "uploaded-console-log",
+              "uploaded-crash-report"
+            ]
           },
           "raw_ref": {
             "type": ["string", "null"]
@@ -275,7 +293,8 @@
         "sync.replication",
         "object.repair",
         "schema.validation",
-        "agent.action"
+        "agent.action",
+        "power.wake"
       ]
     },
     "lane": {
@@ -289,14 +308,15 @@
         "sync",
         "developer_diagnostics",
         "hardware_ui",
-        "analytics"
+        "analytics",
+        "power"
       ]
     },
     "severity": {
       "enum": ["trace", "debug", "info", "notice", "warning", "error", "critical"]
     },
     "outcome": {
-      "enum": ["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed"]
+      "enum": ["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed", "observed"]
     },
     "privacy_tier": {
       "enum": ["public_summary", "user_private", "admin_forensic", "sealed_secret"]
@@ -358,7 +378,7 @@
           "pattern": "^(sha256:[a-fA-F0-9]{64})?$"
         },
         "attestation_state": {
-          "enum": ["verified", "degraded", "missing", "failed"]
+          "enum": ["verified", "degraded", "missing", "failed", "not_applicable"]
         },
         "network_lookup": {
           "enum": ["not_attempted", "blocked_by_policy", "allowed", "failed", "succeeded"]
