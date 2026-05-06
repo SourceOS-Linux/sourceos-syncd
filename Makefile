@@ -1,6 +1,6 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl install-dev
 
-validate: validate-json validate-schemas validate-control-plane
+validate: validate-json validate-schemas validate-control-plane validate-eventctl
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -31,3 +31,17 @@ validate-schemas:
 
 validate-control-plane:
 	python3 tools/validate_control_plane_examples.py
+
+validate-eventctl:
+	python3 tools/sourceos_eventctl.py validate examples/events/apple-mdm-entitlement-denial.coalesced.json
+	python3 tools/sourceos_eventctl.py explain examples/events/apple-darkwake-network-receipt.json >/dev/null
+	python3 tools/sourceos_eventctl.py emit-policy-decision \
+		--actor sourceos-policy-engine \
+		--subject com.example.target \
+		--policy-rule sourceos.example.deny \
+		--operation ipc.lookup.example \
+		--target-class example_ipc_service \
+		--explanation-code POLICY_EXPECTED_TEST_BOUNDARY \
+		--summary 'Example expected policy boundary was enforced.' \
+		--why 'This smoke test proves generated policy-decision events validate against the canonical schema.' \
+		--next-action 'No action required.' >/dev/null
