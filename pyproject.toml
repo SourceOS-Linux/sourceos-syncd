@@ -19,6 +19,7 @@ classifiers = [
 
 [project.scripts]
 sourceos-syncd = "sourceos_syncd.cli:main"
+sourceos-syncd-service = "sourceos_syncd.service:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
