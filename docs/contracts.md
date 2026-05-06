@@ -2,9 +2,9 @@
 
 Canonical architecture: `SourceOS-Linux/sourceos-spec/docs/architecture/sourceos-state-integrity-layer.md`
 
-This repository implements the first executable contract for SourceOS State Integrity. The current implementation lane is Python and standard-library-first. It provides State Integrity Report generation, diagnosis, verification, non-destructive repair planning, a filesystem-backed local store prototype, an append-only JSONL event log, and registry persistence for early actor/schema/object/profile/device state.
+This repository implements the first executable contract for SourceOS State Integrity. The current implementation lane is Python and standard-library-first. It provides State Integrity Report generation, diagnosis, verification, non-destructive repair planning, a filesystem-backed local store prototype, an append-only JSONL event log, registry persistence, and contract models for actors, schemas, objects, policy decisions, conflicts, events, profiles, devices, sync plans, and agent object transactions.
 
-The next daemon phases should extend this baseline into full actor, schema, object, event-log, policy, profile, and repair subsystems without breaking the current JSON report contracts.
+The next daemon phases should extend this baseline into full event-log, policy, profile, repair, service, and adapter subsystems without breaking the current JSON report contracts.
 
 ## Contract Principles
 
@@ -13,8 +13,8 @@ The next daemon phases should extend this baseline into full actor, schema, obje
 - Repair starts as preview/planning; apply paths require explicit policy and operator approval.
 - Durable state, rebuildable state, and disposable state must be classified separately.
 - Policy denials, conflicts, transport failures, degraded indexes, and repair-needed states must not collapse into generic errors.
-- Agent writes must eventually be attributable to registered actors.
-- Downstream surfaces should consume reports/events, not scrape raw daemon logs.
+- Agent writes must be attributable to registered actors.
+- Downstream surfaces should consume reports/events/contracts, not scrape raw daemon logs.
 - Read paths must not silently initialize, reset, or repair local state.
 
 ## Current CLI Commands
@@ -93,6 +93,148 @@ Disposable directories:
 
 - `tmp`
 
+## Contract Model Module
+
+The contract model module is:
+
+```text
+src/sourceos_syncd/contracts.py
+```
+
+It provides standard-library-only dataclass contracts and validation for:
+
+```text
+sourceos.profile-record/v1alpha1
+sourceos.device-record/v1alpha1
+sourceos.actor-record/v1alpha1
+sourceos.schema-record/v1alpha1
+sourceos.object-record/v1alpha1
+sourceos.sync-plan/v1alpha1
+sourceos.conflict-record/v1alpha1
+sourceos.policy-decision/v1alpha1
+sourceos.integrity-event/v1alpha1
+sourceos.agent-object-transaction/v1alpha1
+```
+
+Use `validate_contract(record)` to validate a JSON object by its `schema` field. Use the specific dataclass `from_dict()` helpers when callers know the expected type.
+
+## Contract Fixtures
+
+Fixtures live under:
+
+```text
+examples/contracts/
+```
+
+Current fixtures:
+
+```text
+profile.local-dev.json
+device.local.json
+actor.agent-one.json
+schema.source-object-v1.json
+object.alpha.json
+sync-plan.alpha.json
+conflict.alpha.json
+policy.decision-review.json
+event.object-alpha-created.json
+agent-transaction.alpha.json
+```
+
+The contract test suite loads every fixture, validates it through the model registry, and round-trips each fixture through its dataclass model.
+
+## Controlled Values
+
+Actor types:
+
+```text
+human, app, agent, device, service, import_bridge, export_bridge, model_runtime, remote_relay
+```
+
+Actor capabilities:
+
+```text
+read, write, delete, merge, repair, migrate_schema, export, replicate
+```
+
+Trust levels:
+
+```text
+local, user, workspace, org, external, quarantined
+```
+
+Privacy classes:
+
+```text
+public, personal, work, confidential, regulated, secret
+```
+
+Sync visibility:
+
+```text
+local_only, profile, workspace, org, public
+```
+
+Retention classes:
+
+```text
+ephemeral, normal, retained, legal_hold
+```
+
+Object states:
+
+```text
+active, deleted, tombstoned, quarantined, conflicted
+```
+
+Sync operation classes:
+
+```text
+replicate, import, export, repair, migrate, delete, restore
+```
+
+Sync plan statuses:
+
+```text
+planned, blocked, running, failed, completed, cancelled
+```
+
+Conflict severities:
+
+```text
+info, warning, review_required, blocking
+```
+
+Policy effects:
+
+```text
+allow, deny, review_required
+```
+
+Agent transaction operations:
+
+```text
+create, update, delete, merge, repair, migrate
+```
+
+Agent transaction statuses:
+
+```text
+draft, proposed, approved, applied, rejected, reverted
+```
+
+Device states:
+
+```text
+trusted, untrusted, revoked, quarantined
+```
+
+Profile classes:
+
+```text
+personal, work, client, air_gapped, lab, public_open_source
+```
+
 ## Current Registry Record Schemas
 
 Registry writes assign default schemas when a record does not already provide one:
@@ -165,21 +307,20 @@ The current Python implementation defines these contract families:
 - local store metadata
 - append-only journal events
 - registry records
+- typed contract dataclasses and validators
 
 ## Next Model Families
 
-The next implementation phase should add first-class contracts for:
+The next implementation phase should add deeper behavior around the now-defined contracts:
 
-- richer actor records
-- source objects
-- schema contracts
-- sync plans
-- conflict records
-- policy decisions
-- canonical integrity events
+- policy decision adapter
+- schema registry validation and migrations
+- object registry validation against schema contracts
+- sync plan execution state
+- conflict resolution reports
 - repair reports tied to durable/rebuildable/disposable state
-- profile and device trust records
-- agent object transactions
+- profile and device trust lifecycle
+- agent transaction review/apply/revert workflow
 
 ## MVP Persistence Boundary
 
