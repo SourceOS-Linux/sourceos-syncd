@@ -11,30 +11,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Show Python version
-        run: python3 --version
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install validation dependencies
+        run: python3 -m pip install -r requirements-dev.txt
 
       - name: Validate JSON syntax
-        run: |
-          python3 - <<'PY'
-          import json
-          import pathlib
-          import sys
+        run: make validate-json
 
-          failed = False
-          for root in (pathlib.Path('schemas'), pathlib.Path('examples')):
-              if not root.exists():
-                  continue
-              for path in sorted(root.rglob('*.json')):
-                  try:
-                      json.loads(path.read_text())
-                  except Exception as exc:
-                      print(f'{path}: invalid JSON: {exc}', file=sys.stderr)
-                      failed = True
-          if failed:
-              raise SystemExit(1)
-          print('JSON syntax validated.')
-          PY
+      - name: Validate JSON Schemas and examples
+        run: make validate-schemas
 
-      - name: Validate control-plane examples
-        run: python3 tools/validate_control_plane_examples.py
+      - name: Validate control-plane semantic invariants
+        run: make validate-control-plane
