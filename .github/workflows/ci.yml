@@ -69,3 +69,12 @@ jobs:
           sourceos-syncd evidence validate --file /tmp/sourceos-syncd.policy.evidence.json --compact
           sourceos-syncd evidence write --file examples/policy/secure-agent-access.decision.json --type policy-decision --subject sourceos-syncd --output-dir "$EVIDENCE_DIR" --compact > /tmp/sourceos-syncd.evidence-write.json
           test -n "$(ls -A "$EVIDENCE_DIR")"
+
+      - name: Exercise AgentPlane trust gate
+        run: |
+          sourceos-syncd trust evaluate --file /tmp/sourceos-syncd.snapshot.json --subject agentplane --action read --lane normal --compact > /tmp/sourceos-syncd.trust.allowed.json
+          sourceos-syncd trust validate --file /tmp/sourceos-syncd.trust.allowed.json --compact
+          sourceos-syncd trust evaluate --file /tmp/sourceos-syncd.snapshot.json --subject agentplane --action read --lane normal --require-attestation --compact || test $? -eq 2
+          sourceos-syncd trust validate --file examples/trust/normal-read.allowed.json --compact
+          sourceos-syncd evidence wrap --file /tmp/sourceos-syncd.trust.allowed.json --type agent-trust-decision --subject agentplane --compact > /tmp/sourceos-syncd.trust.evidence.json
+          sourceos-syncd evidence validate --file /tmp/sourceos-syncd.trust.evidence.json --compact
