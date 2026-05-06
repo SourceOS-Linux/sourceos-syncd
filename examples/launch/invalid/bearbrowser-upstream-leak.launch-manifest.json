@@ -1,0 +1,36 @@
+{
+  "schema_version": "sourceos.launch_manifest.v0.1",
+  "product_id": "dev.sourceos.FirefoxBrowser",
+  "display_name": "Firefox",
+  "bundle_identity": {
+    "bundle_id": "org.mozilla.firefox",
+    "expected_process_name": "Firefox",
+    "upstream_engine": "Firefox/Gecko"
+  },
+  "entrypoint": {
+    "absolute_path": "/Applications/BearBrowser.app/Contents/MacOS/firefox",
+    "args": []
+  },
+  "environment": {
+    "inherit_user_shell": true,
+    "path": [
+      "/opt/homebrew/bin",
+      "/opt/homebrew/bin",
+      "/usr/bin",
+      "/bin"
+    ],
+    "allowed_variables": [
+      "HOME",
+      "PATH",
+      "PYTHONPATH"
+    ],
+    "denied_variables": []
+  },
+  "identity_invariants": {
+    "dock_name": "Firefox",
+    "menu_name": "Firefox",
+    "crash_report_name": "Firefox",
+    "profile_path_policy": "May use upstream Firefox profile paths.",
+    "helper_prefix": "Firefox"
+  }
+}
