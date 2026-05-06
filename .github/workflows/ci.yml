@@ -78,3 +78,10 @@ jobs:
           sourceos-syncd trust validate --file examples/trust/normal-read.allowed.json --compact
           sourceos-syncd evidence wrap --file /tmp/sourceos-syncd.trust.allowed.json --type agent-trust-decision --subject agentplane --compact > /tmp/sourceos-syncd.trust.evidence.json
           sourceos-syncd evidence validate --file /tmp/sourceos-syncd.trust.evidence.json --compact
+
+      - name: Exercise Delivery Excellence scorecard
+        run: |
+          sourceos-syncd scorecard evaluate --file /tmp/sourceos-syncd.snapshot.json --compact > /tmp/sourceos-syncd.scorecard.json
+          sourceos-syncd scorecard validate --file /tmp/sourceos-syncd.scorecard.json --compact
+          sourceos-syncd evidence wrap --file /tmp/sourceos-syncd.scorecard.json --type delivery-scorecard --subject sourceos-syncd --compact > /tmp/sourceos-syncd.scorecard.evidence.json
+          sourceos-syncd evidence validate --file /tmp/sourceos-syncd.scorecard.evidence.json --compact
