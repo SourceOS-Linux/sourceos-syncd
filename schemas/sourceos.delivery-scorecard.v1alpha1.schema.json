@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.delivery-scorecard.v1alpha1.schema.json",
+  "title": "SourceOS Delivery Scorecard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "scorecard_id",
+    "generated_at",
+    "engine",
+    "component",
+    "status",
+    "score",
+    "report_digest",
+    "summary",
+    "dimensions",
+    "gates"
+  ],
+  "properties": {
+    "schema": { "const": "sourceos.delivery-scorecard/v1alpha1" },
+    "scorecard_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "engine": { "type": "string", "minLength": 1 },
+    "component": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["ready", "watch", "degraded", "blocked"] },
+    "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "report_digest": { "type": "string", "pattern": "^sha256:" },
+    "summary": { "type": "string", "minLength": 1 },
+    "dimensions": { "type": "object", "additionalProperties": true },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "status", "evidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["pass", "warn", "fail"] },
+          "evidence": { "type": "object", "additionalProperties": true }
+        }
+      }
+    }
+  }
+}
