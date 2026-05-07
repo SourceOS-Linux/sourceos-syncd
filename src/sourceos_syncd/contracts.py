@@ -158,7 +158,7 @@ class ActorRecord(JsonContract):
 
     @classmethod
     def validate_dict(cls, record: dict[str, Any]) -> dict[str, Any]:
-        super().validate_dict(record)
+        JsonContract.validate_dict.__func__(cls, record)
         invalid = sorted(set(record.get("capabilities", [])) - ACTOR_CAPABILITIES)
         if invalid:
             raise ContractError(f"ActorRecord.capabilities contains invalid values: {invalid}")
