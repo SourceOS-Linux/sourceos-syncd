@@ -1,6 +1,6 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity
+validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -56,3 +56,8 @@ validate-identity:
 	python3 tools/sourceos_identity_audit.py \
 		--service examples/services/bearbrowser.service.json \
 		--launch examples/launch/bearbrowser.launch-manifest.json
+
+validate-process-provenance:
+	python3 tools/sourceos_process_provenance.py validate examples/process-provenance/package-shell.provenance.json
+	python3 tools/sourceos_process_provenance.py emit-events examples/process-provenance/package-shell.provenance.json >/dev/null
+	! python3 tools/sourceos_process_provenance.py validate examples/process-provenance/invalid/bad-path-class.provenance.json
