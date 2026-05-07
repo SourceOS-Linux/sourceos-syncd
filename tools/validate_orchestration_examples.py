@@ -123,9 +123,21 @@ def validate_bundle(path: pathlib.Path) -> list[str]:
     return errors
 
 
+def is_bundle_file(path: pathlib.Path) -> bool:
+    """Return true for orchestration bundle fixtures only.
+
+    `examples/orchestration/*.records.json` files are record collections with
+    top-level arrays and are validated by their own lanes. They must not be fed
+    into the bundle validator, whose contract requires a top-level object.
+    """
+    return path.suffix == ".json" and not path.name.endswith(".records.json")
+
+
 def main() -> int:
     errors: list[str] = []
     for path in sorted(BUNDLE_DIR.glob("*.json")):
+        if not is_bundle_file(path):
+            continue
         errors.extend(validate_bundle(path))
 
     if errors:
