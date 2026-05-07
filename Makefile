@@ -53,9 +53,7 @@ validate-events:
 	python3 tools/validate_events.py
 
 validate-identity:
-	python3 tools/sourceos_identity_audit.py \
-		--service examples/services/bearbrowser.service.json \
-		--launch examples/launch/bearbrowser.launch-manifest.json
+	python3 tools/smoke_identity_audit.py
 
 validate-process-provenance:
 	python3 tools/sourceos_process_provenance.py validate examples/process-provenance/package-shell.provenance.json
