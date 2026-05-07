@@ -68,6 +68,17 @@ jobs:
           sourceos-syncd health snapshot --store-root "$STORE_ROOT" --compact > /tmp/sourceos-syncd.store.snapshot.json
           sourceos-syncd health verify --file /tmp/sourceos-syncd.store.snapshot.json --compact
 
+      - name: Exercise orchestration event queue
+        run: |
+          ORCH_ROOT=/tmp/sourceos-syncd-orchestration
+          sourceos-syncd orchestration init --root "$ORCH_ROOT" --compact
+          sourceos-syncd orchestration enqueue --root "$ORCH_ROOT" --file examples/orchestration/event-capability.records.json --compact > /tmp/sourceos-syncd.orchestration.enqueue.json
+          sourceos-syncd orchestration summary --root "$ORCH_ROOT" --compact > /tmp/sourceos-syncd.orchestration.summary.json
+          sourceos-syncd orchestration list --root "$ORCH_ROOT" --state pending --compact > /tmp/sourceos-syncd.orchestration.pending.json
+          sourceos-syncd orchestration list --root "$ORCH_ROOT" --state waiting-approval --compact > /tmp/sourceos-syncd.orchestration.waiting.json
+          sourceos-syncd orchestration list --root "$ORCH_ROOT" --state blocked --compact > /tmp/sourceos-syncd.orchestration.blocked.json
+          sourceos-syncd orchestration replay --root "$ORCH_ROOT" --state pending --compact > /tmp/sourceos-syncd.orchestration.replay.json
+
       - name: Exercise local evidence writer
         run: |
           EVIDENCE_DIR=/tmp/sourceos-syncd-evidence
