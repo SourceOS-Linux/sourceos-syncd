@@ -1,0 +1,75 @@
+{
+  "schema_version": "sourceos.event.v0.1",
+  "event_id": "evt_shell_exit_20260504_192158",
+  "event_class": "process.exit",
+  "lane": "process_lifecycle",
+  "severity": "info",
+  "outcome": "allowed",
+  "created_at": "2026-05-04T19:21:58.455000-04:00",
+  "observed_at_monotonic_ns": 1635335455000,
+  "host": {
+    "host_id": "host_local_pseudonym",
+    "platform": "sourceos-darwin-compatible",
+    "kernel": "darwin-family",
+    "privacy_zone": "user_private"
+  },
+  "actor": {
+    "actor_id": "actor_local_interactive_shell",
+    "actor_type": "process",
+    "display_name": "package-managed shell",
+    "uid": "user:501",
+    "session_id": "session_local_console",
+    "authority_domain": "user"
+  },
+  "causality": {
+    "parent_event_id": "evt_shell_launch_20260504_192158",
+    "root_event_id": "evt_shell_launch_20260504_192158",
+    "span_id": "span_shell_exit",
+    "trace_id": "trace_shell_launch_20260504_192158"
+  },
+  "subject": {
+    "type": "process",
+    "id": "proc_package_managed_shell",
+    "display": "Homebrew-like package-managed arm64 shell"
+  },
+  "trust": {
+    "mode": "local_first",
+    "signature_state": "valid",
+    "package_origin": "package_manager",
+    "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "attestation_state": "verified",
+    "network_lookup": "not_attempted",
+    "degradation_reason": null
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": ["raw_command_args", "exact_executable_path"]
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_process_monitor_shell_exit",
+      "source": "process-monitor",
+      "raw_ref": "rawlog:console-export:19:21:58.455",
+      "summary": "Package-managed shell exited cleanly with exit code 0 after a short interactive run."
+    },
+    {
+      "evidence_id": "ev_process_exit_tuple",
+      "source": "process-monitor",
+      "raw_ref": "examples/process-provenance/package-shell.provenance.json",
+      "summary": "Exit tuple records observed=true, exit_code=0, runtime_ms=98, termination_reason=clean_exit."
+    }
+  ],
+  "operator_narrative": {
+    "summary": "Package-managed shell exited cleanly and remained attached to the original launch trace.",
+    "risk": "low",
+    "why": "The exit status was clean, the binary remained package-managed, and the exit event shares the launch trace rather than creating unrelated log noise.",
+    "next_action": "No action required unless the launch itself was unexpected.",
+    "drilldown_refs": ["ev_process_monitor_shell_exit", "ev_process_exit_tuple"]
+  },
+  "sync": {
+    "replication_policy": "local_only",
+    "retention_class": "standard",
+    "exportable": false
+  }
+}
