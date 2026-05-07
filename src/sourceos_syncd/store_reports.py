@@ -19,6 +19,7 @@ def snapshot_from_store(root: str | Path) -> dict[str, Any]:
     report["stores"] = summary["stores"]
     report["lanes"] = summary["lanes"]
     report["pipeline"] = summary["pipeline"]
+    report["local_state"] = copy.deepcopy(summary["local_state"])
     report["collection"]["status"] = "partial"
     if not summary["local_state"]["initialized"]:
         report["collection"]["errors"] = sorted(set(report["collection"].get("errors", []) + ["local store is not initialized; run store init first"]))
