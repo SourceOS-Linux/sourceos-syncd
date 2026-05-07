@@ -1,0 +1,42 @@
+{
+  "schema_version": "sourceos.process-provenance.v0.1",
+  "process_identity": {
+    "pid": 52613,
+    "ppid": 1,
+    "uid_class": "user",
+    "gid_class": "staff",
+    "parent_command_class": "interactive_shell",
+    "environment_class": "user_interactive",
+    "launch_reason": "interactive",
+    "exit": {
+      "observed": true,
+      "exit_code": 0,
+      "signal": null,
+      "runtime_ms": 98,
+      "termination_reason": "clean_exit"
+    }
+  },
+  "executable_identity": {
+    "path_class": "package_manager",
+    "display_path": "package-managed shell binary",
+    "exact_path_ref": "sealed:exact_executable_path",
+    "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "package_origin": "package_manager",
+    "package_receipt_ref": "pkg:homebrew/bash/5.3.9",
+    "signature_state": "valid",
+    "signer_display": "package-manager verified local binary",
+    "trust_mode": "local_first",
+    "network_lookup": "not_attempted"
+  },
+  "causality": {
+    "trace_id": "trace_shell_launch_20260504_192158",
+    "root_event_id": "evt_shell_launch_20260504_192158",
+    "parent_event_id": null,
+    "span_id": "span_shell_launch_provenance"
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": ["exact_executable_path", "raw_command_args"]
+  }
+}
