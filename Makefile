@@ -1,6 +1,6 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-policy-normalizer validate-service-graph install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph
+validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-policy-normalizer validate-service-graph
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -41,6 +41,18 @@ validate-process-provenance:
 	python3 tools/sourceos_process_provenance.py validate examples/process-provenance/package-shell.provenance.json
 	python3 tools/sourceos_process_provenance.py emit-events examples/process-provenance/package-shell.provenance.json >/dev/null
 	! python3 tools/sourceos_process_provenance.py validate examples/process-provenance/invalid/bad-path-class.provenance.json
+
+validate-policy-normalizer:
+	python3 tools/sourceos_policy_normalizer.py validate-registry
+	python3 tools/sourceos_policy_normalizer.py validate-observation examples/policy-observations/expected-metadata-boundary.json
+	python3 tools/sourceos_policy_normalizer.py validate-observation examples/policy-observations/expected-network-disabled.json
+	python3 tools/sourceos_policy_normalizer.py validate-observation examples/policy-observations/degraded-trust-local-only.json
+	python3 tools/sourceos_policy_normalizer.py validate-observation examples/policy-observations/attack-like-privilege-boundary-probe.json
+	python3 tools/sourceos_policy_normalizer.py normalize examples/policy-observations/expected-metadata-boundary.json >/dev/null
+	python3 tools/sourceos_policy_normalizer.py normalize examples/policy-observations/expected-network-disabled.json >/dev/null
+	python3 tools/sourceos_policy_normalizer.py normalize examples/policy-observations/degraded-trust-local-only.json >/dev/null
+	python3 tools/sourceos_policy_normalizer.py normalize examples/policy-observations/attack-like-privilege-boundary-probe.json >/dev/null
+	! python3 tools/sourceos_policy_normalizer.py validate-observation examples/policy-observations/invalid/expected-boundary-as-attack-like.json
 
 validate-service-graph:
 	python3 tools/sourceos_service_graph.py validate examples/services/*.json
