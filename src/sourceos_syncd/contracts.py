@@ -53,11 +53,24 @@ OBJECT_STATES = {"active", "deleted", "tombstoned", "quarantined", "conflicted"}
 SYNC_OPERATION_CLASSES = {"replicate", "import", "export", "repair", "migrate", "delete", "restore"}
 SYNC_PLAN_STATUSES = {"planned", "blocked", "running", "failed", "completed", "cancelled"}
 CONFLICT_SEVERITIES = {"info", "warning", "review_required", "blocking"}
+DECISION_CARD_OPTIONS = {"merge", "fork", "skip"}
 POLICY_EFFECTS = {"allow", "deny", "review_required"}
 TRANSACTION_OPERATIONS = {"create", "update", "delete", "merge", "repair", "migrate"}
 TRANSACTION_STATUSES = {"draft", "proposed", "approved", "applied", "rejected", "reverted"}
 DEVICE_STATES = {"trusted", "untrusted", "revoked", "quarantined"}
 PROFILE_CLASSES = {"personal", "work", "client", "air_gapped", "lab", "public_open_source"}
+WORKSPACE_OPERATION_TYPES = {
+    "sync.operation.enqueue",
+    "sync.operation.replay",
+    "sync.operation.reconcile",
+    "sync.conflict.detect",
+    "sync.conflict.resolve",
+    "sync.repair.apply",
+    "sync.tombstone.apply",
+    "sync.checkpoint.write",
+}
+WORKSPACE_OPERATION_STATUSES = {"queued", "running", "replayed", "reconciled", "blocked", "completed", "failed", "cancelled"}
+OPERATION_TASK_STATUSES = {"pending", "running", "succeeded", "failed", "cancelled"}
 
 
 @dataclass(slots=True)
@@ -158,7 +171,7 @@ class ActorRecord(JsonContract):
 
     @classmethod
     def validate_dict(cls, record: dict[str, Any]) -> dict[str, Any]:
-        super().validate_dict(record)
+        super(ActorRecord, cls).validate_dict(record)
         invalid = sorted(set(record.get("capabilities", [])) - ACTOR_CAPABILITIES)
         if invalid:
             raise ContractError(f"ActorRecord.capabilities contains invalid values: {invalid}")
@@ -168,7 +181,7 @@ class ActorRecord(JsonContract):
 @dataclass(slots=True)
 class SchemaContractRecord(JsonContract):
     schema: ClassVar[str] = "sourceos.schema-record/v1alpha1"
-    required_fields: ClassVar[set[str]] = {
+    schema_required_keys: ClassVar[set[str]] = {
         "schema_id",
         "object_type",
         "schema_version",
@@ -187,13 +200,40 @@ class SchemaContractRecord(JsonContract):
     schema_id: str
     object_type: str
     schema_version: str
-    required_fields: list[str]
+    required_field_names: list[str]
     field_owners: dict[str, str]
     migration_policy: str
     conflict_policy: str
     tombstone_policy: str
     sync_visibility: str
     retention_class: str
+
+    @classmethod
+    def validate_dict(cls, record: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(record, dict):
+            raise ContractError(f"{cls.__name__} must be a JSON object")
+        require_fields(record, cls.schema_required_keys, cls.__name__)
+        for field_name, allowed in cls.controlled_fields.items():
+            require_allowed(str(record.get(field_name)), allowed, field_name, cls.__name__)
+        for field_name in cls.list_fields:
+            require_list(record, field_name, cls.__name__)
+        for field_name in cls.mapping_fields:
+            require_mapping(record, field_name, cls.__name__)
+        return record
+
+    def to_dict(self) -> dict[str, Any]:
+        data = super(SchemaContractRecord, self).to_dict()
+        data["required_fields"] = data.pop("required_field_names")
+        return data
+
+    @classmethod
+    def from_dict(cls, record: dict[str, Any]) -> JsonContract:
+        cls.validate_dict(record)
+        converted = dict(record)
+        converted["required_field_names"] = converted.pop("required_fields")
+        allowed = {field.name for field in dataclasses.fields(cls)}
+        values = {key: value for key, value in converted.items() if key in allowed}
+        return cls(**values)  # type: ignore[arg-type]
 
 
 @dataclass(slots=True)
@@ -301,11 +341,13 @@ class ConflictRecord(JsonContract):
         "schema_version",
         "severity",
         "merge_policy",
+        "decision_card",
         "user_explanation",
         "created_at",
     }
     controlled_fields: ClassVar[dict[str, set[str]]] = {"severity": CONFLICT_SEVERITIES}
     list_fields: ClassVar[set[str]] = {"actors", "devices"}
+    mapping_fields: ClassVar[set[str]] = {"decision_card"}
 
     conflict_id: str
     object_id: str
@@ -317,8 +359,30 @@ class ConflictRecord(JsonContract):
     schema_version: str
     severity: str
     merge_policy: str
+    decision_card: dict[str, Any]
     user_explanation: str
     created_at: str
+
+    @classmethod
+    def validate_dict(cls, record: dict[str, Any]) -> dict[str, Any]:
+        super(ConflictRecord, cls).validate_dict(record)
+        card = record.get("decision_card")
+        if not isinstance(card, dict):
+            raise ContractError("ConflictRecord.decision_card must be an object")
+        require_fields(card, {"card_id", "options", "recommended_option", "selected_option", "rationale", "selected_by", "selected_at"}, "ConflictRecord.decision_card")
+        if not isinstance(card.get("options"), list):
+            raise ContractError("ConflictRecord.decision_card.options must be a list")
+        options = {str(option) for option in card.get("options", [])}
+        invalid_options = sorted(options - DECISION_CARD_OPTIONS)
+        if invalid_options:
+            raise ContractError(f"ConflictRecord.decision_card.options has invalid values: {invalid_options}")
+        recommended = str(card.get("recommended_option"))
+        selected = str(card.get("selected_option"))
+        if recommended not in options:
+            raise ContractError("ConflictRecord.decision_card.recommended_option must be present in options")
+        if selected not in options:
+            raise ContractError("ConflictRecord.decision_card.selected_option must be present in options")
+        return record
 
 
 @dataclass(slots=True)
@@ -397,6 +461,101 @@ class AgentObjectTransactionRecord(JsonContract):
     updated_at: str
 
 
+@dataclass(slots=True)
+class WorkspaceOperationRecord(JsonContract):
+    schema: ClassVar[str] = "sourceos.workspace-operation/v1alpha1"
+    required_fields: ClassVar[set[str]] = {
+        "operation_id",
+        "local_operation_id",
+        "operation_type",
+        "status",
+        "workspace_id",
+        "profile_id",
+        "actor_id",
+        "device_id",
+        "encryption_profile_ref",
+        "local_log_ref",
+        "checkpoint_ref",
+        "causal_parent_ids",
+        "conflict_ids",
+        "provisional_artifact_ids",
+        "artifact_reconciliation",
+        "policy_decision_ref",
+        "artifact_admission_ref",
+        "ledger_evidence_refs",
+        "replay_safe",
+        "stale_task",
+        "lease_expired",
+        "created_at",
+        "updated_at",
+    }
+    controlled_fields: ClassVar[dict[str, set[str]]] = {"operation_type": WORKSPACE_OPERATION_TYPES, "status": WORKSPACE_OPERATION_STATUSES}
+    list_fields: ClassVar[set[str]] = {"causal_parent_ids", "conflict_ids", "ledger_evidence_refs"}
+    mapping_fields: ClassVar[set[str]] = {"provisional_artifact_ids", "artifact_reconciliation"}
+
+    operation_id: str
+    local_operation_id: str
+    operation_type: str
+    status: str
+    workspace_id: str
+    profile_id: str
+    actor_id: str
+    device_id: str
+    encryption_profile_ref: str
+    local_log_ref: str
+    checkpoint_ref: str
+    causal_parent_ids: list[str]
+    conflict_ids: list[str]
+    provisional_artifact_ids: dict[str, str]
+    artifact_reconciliation: dict[str, str]
+    policy_decision_ref: str
+    artifact_admission_ref: str
+    ledger_evidence_refs: list[str]
+    replay_safe: bool
+    stale_task: bool
+    lease_expired: bool
+    created_at: str
+    updated_at: str
+    remote_operation_id: str | None = None
+    replay_idempotency_key: str | None = None
+
+
+@dataclass(slots=True)
+class OperationTaskRecord(JsonContract):
+    schema: ClassVar[str] = "sourceos.operation-task/v1alpha1"
+    required_fields: ClassVar[set[str]] = {
+        "task_id",
+        "operation_id",
+        "operation_type",
+        "status",
+        "attempt",
+        "idempotency_key",
+        "policy_decision_ref",
+        "evidence_refs",
+        "created_at",
+        "updated_at",
+    }
+    controlled_fields: ClassVar[dict[str, set[str]]] = {"operation_type": WORKSPACE_OPERATION_TYPES, "status": OPERATION_TASK_STATUSES}
+    list_fields: ClassVar[set[str]] = {"evidence_refs"}
+
+    task_id: str
+    operation_id: str
+    operation_type: str
+    status: str
+    attempt: int
+    idempotency_key: str
+    policy_decision_ref: str
+    evidence_refs: list[str]
+    created_at: str
+    updated_at: str
+    started_at: str | None = None
+    completed_at: str | None = None
+    remote_operation_id: str | None = None
+    conflict_id: str | None = None
+    checkpoint_ref: str | None = None
+    replay_safe: bool = True
+
+
 CONTRACT_TYPES: dict[str, type[JsonContract]] = {
     ProfileRecord.schema: ProfileRecord,
     DeviceTrustRecord.schema: DeviceTrustRecord,
@@ -408,6 +567,8 @@ CONTRACT_TYPES: dict[str, type[JsonContract]] = {
     PolicyDecisionRecord.schema: PolicyDecisionRecord,
     IntegrityEventRecord.schema: IntegrityEventRecord,
     AgentObjectTransactionRecord.schema: AgentObjectTransactionRecord,
+    WorkspaceOperationRecord.schema: WorkspaceOperationRecord,
+    OperationTaskRecord.schema: OperationTaskRecord,
 }
 
 

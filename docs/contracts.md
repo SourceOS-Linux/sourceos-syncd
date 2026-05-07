@@ -2,7 +2,7 @@
 
 Canonical architecture: `SourceOS-Linux/sourceos-spec/docs/architecture/sourceos-state-integrity-layer.md`
 
-This repository implements the first executable contract for SourceOS State Integrity. The current implementation lane is Python and standard-library-first. It provides State Integrity Report generation, diagnosis, verification, non-destructive repair planning, a filesystem-backed local store prototype, an append-only JSONL event log, registry persistence, and contract models for actors, schemas, objects, policy decisions, conflicts, events, profiles, devices, sync plans, and agent object transactions.
+This repository implements the first executable contract for SourceOS State Integrity. The current implementation lane is Python and standard-library-first. It provides State Integrity Report generation, diagnosis, verification, non-destructive repair planning, a filesystem-backed local store prototype, an append-only JSONL event log, registry persistence, and contract models for actors, schemas, objects, policy decisions, conflicts, events, profiles, devices, sync plans, workspace operations, operation tasks, and agent object transactions.
 
 The next daemon phases should extend this baseline into full event-log, policy, profile, repair, service, and adapter subsystems without breaking the current JSON report contracts.
 
@@ -114,6 +114,8 @@ sourceos.conflict-record/v1alpha1
 sourceos.policy-decision/v1alpha1
 sourceos.integrity-event/v1alpha1
 sourceos.agent-object-transaction/v1alpha1
+sourceos.workspace-operation/v1alpha1
+sourceos.operation-task/v1alpha1
 ```
 
 Use `validate_contract(record)` to validate a JSON object by its `schema` field. Use the specific dataclass `from_dict()` helpers when callers know the expected type.
@@ -139,6 +141,8 @@ conflict.alpha.json
 policy.decision-review.json
 event.object-alpha-created.json
 agent-transaction.alpha.json
+workspace-operation.alpha.json
+operation-task.alpha.json
 ```
 
 The contract test suite loads every fixture, validates it through the model registry, and round-trips each fixture through its dataclass model.
@@ -221,6 +225,18 @@ Agent transaction statuses:
 
 ```text
 draft, proposed, approved, applied, rejected, reverted
+```
+
+Workspace operation types:
+
+```text
+sync.operation.enqueue, sync.operation.replay, sync.operation.reconcile, sync.conflict.detect, sync.conflict.resolve, sync.repair.apply, sync.tombstone.apply, sync.checkpoint.write
+```
+
+Decision card options:
+
+```text
+merge, fork, skip
 ```
 
 Device states:
