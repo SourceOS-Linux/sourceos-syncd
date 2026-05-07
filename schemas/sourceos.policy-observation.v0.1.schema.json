@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.policy-observation.v0.1.schema.json",
+  "title": "SourceOS Policy Observation",
+  "description": "Raw normalized observation input for generating canonical SourceOS policy.decision events from registry-backed explanation codes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "observation_id",
+    "explanation_code",
+    "actor",
+    "subject",
+    "operation",
+    "target_class",
+    "result"
+  ],
+  "properties": {
+    "schema_version": { "const": "sourceos.policy-observation.v0.1" },
+    "observation_id": { "type": "string", "minLength": 1 },
+    "explanation_code": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+    "policy_bundle": { "type": "string", "minLength": 1, "default": "sourceos.baseline" },
+    "policy_rule": { "type": "string", "minLength": 1, "default": "sourceos.policy.registry" },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_id", "actor_type", "display_name"],
+      "properties": {
+        "actor_id": { "type": "string", "minLength": 1 },
+        "actor_type": { "enum": ["process", "agent", "user", "service", "kernel", "policy_engine"] },
+        "display_name": { "type": "string", "minLength": 1 },
+        "uid": { "type": ["string", "integer", "null"] },
+        "session_id": { "type": ["string", "null"] },
+        "authority_domain": { "type": ["string", "null"] }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "display"],
+      "properties": {
+        "type": { "enum": ["process", "file", "socket", "ipc_service", "object", "schema", "replica", "policy", "trust_root", "package", "power_state"] },
+        "id": { "type": "string", "minLength": 1 },
+        "display": { "type": "string", "minLength": 1 }
+      }
+    },
+    "operation": { "type": "string", "minLength": 1 },
+    "target_class": { "type": "string", "minLength": 1 },
+    "result": { "enum": ["allow", "deny", "defer", "degrade"] },
+    "semantic_outcome": { "enum": ["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed", "observed"] },
+    "severity": { "enum": ["trace", "debug", "info", "notice", "warning", "error", "critical"] },
+    "risk": { "enum": ["none", "low", "medium", "high", "critical", "unknown"] },
+    "summary": { "type": "string" },
+    "why": { "type": "string" },
+    "next_action": { "type": "string" },
+    "causality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "parent_event_id": { "type": ["string", "null"], "pattern": "^(evt_[A-Za-z0-9._:-]+)?$" },
+        "root_event_id": { "type": ["string", "null"], "pattern": "^(evt_[A-Za-z0-9._:-]+)?$" },
+        "trace_id": { "type": ["string", "null"] },
+        "span_id": { "type": ["string", "null"] }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tier": { "enum": ["public_summary", "user_private", "admin_forensic", "sealed_secret"] },
+        "redaction_policy": { "enum": ["preserve_causality", "sealed", "raw_forensic"] },
+        "secret_fields": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "source", "summary"],
+        "properties": {
+          "evidence_id": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "minLength": 1 },
+          "raw_ref": { "type": ["string", "null"] },
+          "summary": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
