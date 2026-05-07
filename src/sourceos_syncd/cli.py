@@ -7,6 +7,13 @@ import json
 import sys
 
 from .evidence import load_json_file, make_evidence, validate_evidence, write_evidence_file
+from .orchestration_events import (
+    enqueue_event_file,
+    init_event_queue,
+    list_event_queue,
+    replay_event_queue,
+    summarize_event_queue,
+)
 from .reports import load_report, pretty_json, repair_plan, snapshot, validate_report, verify, with_fresh_diagnosis
 from .scorecard import evaluate_scorecard, validate_scorecard
 from .store_reports import append_store_event, init_store, snapshot_from_store
@@ -25,7 +32,7 @@ def add_compact(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sourceos-syncd",
-        description="SourceOS state integrity snapshot, diagnosis, verification, planning, evidence, trust, and scorecard tools.",
+        description="SourceOS state integrity snapshot, diagnosis, verification, planning, evidence, trust, orchestration, and scorecard tools.",
     )
     parser.add_argument("--compact", action="store_true", help="emit compact JSON")
 
@@ -103,6 +110,32 @@ def build_parser() -> argparse.ArgumentParser:
     trust_validate = trust_sub.add_parser("validate", help="validate an AgentPlane trust decision")
     trust_validate.add_argument("--file", "-f", required=True, help="trust decision JSON file")
     add_compact(trust_validate)
+
+    orchestration = subcommands.add_parser("orchestration", help="event-capability queue, replay, and admission-support commands")
+    orchestration_sub = orchestration.add_subparsers(dest="command", required=True)
+
+    orch_init = orchestration_sub.add_parser("init", help="initialize the local orchestration event queue")
+    orch_init.add_argument("--root", required=True, help="local store root")
+    add_compact(orch_init)
+
+    orch_enqueue = orchestration_sub.add_parser("enqueue", help="enqueue event-capability records or a full event-capability bundle")
+    orch_enqueue.add_argument("--root", required=True, help="local store root")
+    orch_enqueue.add_argument("--file", "-f", required=True, help="event-capability records or bundle JSON")
+    add_compact(orch_enqueue)
+
+    orch_list = orchestration_sub.add_parser("list", help="list queued orchestration events")
+    orch_list.add_argument("--root", required=True, help="local store root")
+    orch_list.add_argument("--state", choices=["pending", "waiting-approval", "blocked", "dead-letter"], help="optional queue state")
+    add_compact(orch_list)
+
+    orch_replay = orchestration_sub.add_parser("replay", help="emit a non-mutating replay artifact for a queue state")
+    orch_replay.add_argument("--root", required=True, help="local store root")
+    orch_replay.add_argument("--state", default="pending", choices=["pending", "waiting-approval", "blocked", "dead-letter"], help="queue state to replay")
+    add_compact(orch_replay)
+
+    orch_summary = orchestration_sub.add_parser("summary", help="summarize the orchestration event queue")
+    orch_summary.add_argument("--root", required=True, help="local store root")
+    add_compact(orch_summary)
 
     scorecard = subcommands.add_parser("scorecard", help="Delivery Excellence scorecards")
     scorecard_sub = scorecard.add_subparsers(dest="command", required=True)
@@ -196,6 +229,26 @@ def main(argv: list[str] | None = None) -> int:
             errors = validate_trust_decision(decision)
             sys.stdout.write(pretty_json({"valid": not errors, "errors": errors}, pretty=pretty))
             return 0 if not errors else 2
+
+        if args.area == "orchestration" and args.command == "init":
+            sys.stdout.write(pretty_json(init_event_queue(args.root), pretty=pretty))
+            return 0
+
+        if args.area == "orchestration" and args.command == "enqueue":
+            sys.stdout.write(pretty_json(enqueue_event_file(args.root, args.file), pretty=pretty))
+            return 0
+
+        if args.area == "orchestration" and args.command == "list":
+            sys.stdout.write(pretty_json(list_event_queue(args.root, state=args.state), pretty=pretty))
+            return 0
+
+        if args.area == "orchestration" and args.command == "replay":
+            sys.stdout.write(pretty_json(replay_event_queue(args.root, state=args.state), pretty=pretty))
+            return 0
+
+        if args.area == "orchestration" and args.command == "summary":
+            sys.stdout.write(pretty_json(summarize_event_queue(args.root), pretty=pretty))
+            return 0
 
         if args.area == "scorecard" and args.command == "evaluate":
             report = load_json_file(args.file)
