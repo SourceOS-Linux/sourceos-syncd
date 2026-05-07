@@ -187,13 +187,35 @@ class SchemaContractRecord(JsonContract):
     schema_id: str
     object_type: str
     schema_version: str
-    required_fields: list[str]
+    declared_required_fields: list[str]
     field_owners: dict[str, str]
     migration_policy: str
     conflict_policy: str
     tombstone_policy: str
     sync_visibility: str
     retention_class: str
+
+    def to_dict(self) -> dict[str, Any]:
+        data = dataclasses.asdict(self)
+        data["required_fields"] = data.pop("declared_required_fields")
+        data.setdefault("schema", self.schema)
+        return data
+
+    @classmethod
+    def from_dict(cls, record: dict[str, Any]) -> SchemaContractRecord:
+        cls.validate_dict(record)
+        return cls(
+            schema_id=record["schema_id"],
+            object_type=record["object_type"],
+            schema_version=record["schema_version"],
+            declared_required_fields=list(record["required_fields"]),
+            field_owners=dict(record["field_owners"]),
+            migration_policy=record["migration_policy"],
+            conflict_policy=record["conflict_policy"],
+            tombstone_policy=record["tombstone_policy"],
+            sync_visibility=record["sync_visibility"],
+            retention_class=record["retention_class"],
+        )
 
 
 @dataclass(slots=True)
