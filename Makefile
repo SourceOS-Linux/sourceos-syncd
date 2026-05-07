@@ -1,6 +1,6 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance
+validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -59,3 +59,7 @@ validate-process-provenance:
 	python3 tools/sourceos_process_provenance.py validate examples/process-provenance/package-shell.provenance.json
 	python3 tools/sourceos_process_provenance.py emit-events examples/process-provenance/package-shell.provenance.json >/dev/null
 	! python3 tools/sourceos_process_provenance.py validate examples/process-provenance/invalid/bad-path-class.provenance.json
+
+validate-service-graph:
+	python3 tools/sourceos_service_graph.py validate examples/services/*.json
+	python3 tools/sourceos_service_graph.py graph examples/services/*.json --json >/dev/null
