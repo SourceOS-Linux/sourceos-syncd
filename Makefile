@@ -1,6 +1,6 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-policy-normalizer validate-service-graph install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-policy-normalizer validate-service-graph validate-semantic-enterprise-state-integrity install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-policy-normalizer validate-service-graph
+validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-policy-normalizer validate-service-graph validate-semantic-enterprise-state-integrity
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -57,3 +57,6 @@ validate-policy-normalizer:
 validate-service-graph:
 	python3 tools/sourceos_service_graph.py validate examples/services/*.json
 	python3 tools/sourceos_service_graph.py graph examples/services/*.json --json >/dev/null
+
+validate-semantic-enterprise-state-integrity:
+	python3 tools/validate_semantic_enterprise_state_integrity.py
