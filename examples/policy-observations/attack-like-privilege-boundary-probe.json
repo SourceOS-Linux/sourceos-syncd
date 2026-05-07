@@ -1,0 +1,42 @@
+{
+  "schema_version": "sourceos.policy-observation.v0.1",
+  "observation_id": "policy_attack_like_privilege_boundary_probe",
+  "explanation_code": "POLICY_ATTACK_LIKE_PRIVILEGE_BOUNDARY_PROBE",
+  "policy_bundle": "sourceos.baseline.identity",
+  "policy_rule": "identity.privilege-boundary.default-deny",
+  "actor": {
+    "actor_id": "actor_unknown_user_process",
+    "actor_type": "process",
+    "display_name": "unknown user process",
+    "uid": "user",
+    "session_id": "session_unknown",
+    "authority_domain": "user_interactive"
+  },
+  "subject": {
+    "type": "ipc_service",
+    "id": "svc_agent_control_plane",
+    "display": "agent control-plane privileged IPC service"
+  },
+  "operation": "agent.control",
+  "target_class": "agent_control_plane",
+  "result": "deny",
+  "causality": {
+    "parent_event_id": null,
+    "root_event_id": null,
+    "trace_id": "trace_privilege_probe_example",
+    "span_id": "span_policy_privilege_probe"
+  },
+  "privacy": {
+    "tier": "admin_forensic",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": ["raw_command_args", "exact_process_path"]
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_policy_obs_privilege_probe",
+      "source": "policy-engine",
+      "raw_ref": "policy:identity.privilege-boundary.default-deny",
+      "summary": "Process attempted an agent-control operation outside its capability profile."
+    }
+  ]
+}
