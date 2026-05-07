@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.process-provenance.v0.1.schema.json",
+  "title": "SourceOS Process Provenance Tuple",
+  "description": "Minimum process provenance identity tuple for SourceOS process and agent launch attribution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "process_identity",
+    "executable_identity",
+    "causality",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "sourceos.process-provenance.v0.1"
+    },
+    "process_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pid",
+        "ppid",
+        "uid_class",
+        "gid_class",
+        "parent_command_class",
+        "environment_class",
+        "launch_reason"
+      ],
+      "properties": {
+        "pid": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "ppid": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "uid_class": {
+          "enum": ["root", "user", "service", "agent", "unknown"]
+        },
+        "gid_class": {
+          "enum": ["admin", "staff", "service", "agent", "unknown"]
+        },
+        "parent_command_class": {
+          "enum": ["interactive_shell", "system_service", "agent_action", "package_hook", "scheduled_job", "remote_session", "unknown"]
+        },
+        "environment_class": {
+          "enum": ["user_interactive", "system_service", "agent_sandbox", "container", "recovery", "unknown"]
+        },
+        "launch_reason": {
+          "enum": ["interactive", "scheduled", "service_activation", "agent_dispatch", "package_script", "boot", "repair", "sync", "unknown"]
+        },
+        "exit": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["observed"],
+          "properties": {
+            "observed": { "type": "boolean" },
+            "exit_code": { "type": ["integer", "null"] },
+            "signal": { "type": ["string", "null"] },
+            "runtime_ms": { "type": ["integer", "null"], "minimum": 0 },
+            "termination_reason": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "executable_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path_class",
+        "display_path",
+        "content_hash",
+        "package_origin",
+        "signature_state",
+        "trust_mode",
+        "network_lookup"
+      ],
+      "properties": {
+        "path_class": {
+          "enum": ["system", "package_manager", "user_local", "container", "remote_mount", "ephemeral_tmp", "unknown"]
+        },
+        "display_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exact_path_ref": {
+          "type": ["string", "null"]
+        },
+        "content_hash": {
+          "type": ["string", "null"],
+          "pattern": "^(sha256:[a-fA-F0-9]{64})?$"
+        },
+        "package_origin": {
+          "enum": ["system", "package_manager", "user_local", "container", "remote", "unknown"]
+        },
+        "package_receipt_ref": {
+          "type": ["string", "null"]
+        },
+        "signature_state": {
+          "enum": ["valid", "unsigned", "ad_hoc", "unknown", "invalid", "not_applicable"]
+        },
+        "signer_display": {
+          "type": ["string", "null"]
+        },
+        "trust_mode": {
+          "enum": ["local_first", "local_only", "remote_allowed", "remote_required"]
+        },
+        "network_lookup": {
+          "enum": ["not_attempted", "blocked_by_policy", "allowed", "failed", "succeeded"]
+        }
+      }
+    },
+    "causality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trace_id", "root_event_id", "span_id"],
+      "properties": {
+        "trace_id": { "type": "string", "minLength": 1 },
+        "root_event_id": { "type": "string", "pattern": "^evt_[A-Za-z0-9._:-]+$" },
+        "parent_event_id": { "type": ["string", "null"], "pattern": "^(evt_[A-Za-z0-9._:-]+)?$" },
+        "span_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier", "redaction_policy", "secret_fields"],
+      "properties": {
+        "tier": { "enum": ["public_summary", "user_private", "admin_forensic", "sealed_secret"] },
+        "redaction_policy": { "enum": ["preserve_causality", "sealed", "raw_forensic"] },
+        "secret_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
