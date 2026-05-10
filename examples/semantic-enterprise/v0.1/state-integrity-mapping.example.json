@@ -1,0 +1,83 @@
+{
+  "contract": "sourceos-syncd.semantic-enterprise.state-integrity",
+  "version": "0.1.0",
+  "source": {
+    "repository": "SocioProphet/ontogenesis",
+    "release": "semantic-enterprise-v0.1.0",
+    "manifest_path": "manifests/semantic_enterprise_v0_1_manifest.json",
+    "rollup_registry_path": "catalog/semantic_enterprise_v0_1_registry.ttl",
+    "supply_chain_module_path": "Domains/supply-chain.ttl",
+    "named_graph_fixture_path": "examples/named-graphs/semantic_sector_named_graphs.ttl"
+  },
+  "state_integrity_surfaces": [
+    "artifact_lineage",
+    "release_provenance",
+    "repair_lineage",
+    "rollback_evidence",
+    "local_first_state_context",
+    "named_graph_governance"
+  ],
+  "provenance_requirements": [
+    "source_path",
+    "graph_uri",
+    "source_system",
+    "trust_level",
+    "access_class",
+    "retention_policy",
+    "lifecycle_phase",
+    "release_tag"
+  ],
+  "semantic_bindings": [
+    {
+      "sourceos_surface": "release_artifact",
+      "semantic_enterprise_class": "supply-chain:Component",
+      "evidence_role": "software-artifact-component",
+      "required_fields": ["artifact_id", "source_path", "release_tag", "trust_level"]
+    },
+    {
+      "sourceos_surface": "state_integrity_report",
+      "semantic_enterprise_class": "named-graph-governance:CuratedGraph",
+      "evidence_role": "curated-state-perspective",
+      "required_fields": ["graph_uri", "source_system", "access_class", "retention_policy"]
+    },
+    {
+      "sourceos_surface": "repair_plan",
+      "semantic_enterprise_class": "supply-chain:MitigationAction",
+      "evidence_role": "non-destructive-repair-mitigation",
+      "required_fields": ["plan_id", "source_path", "affected_component", "approval_state"]
+    },
+    {
+      "sourceos_surface": "rollback_evidence",
+      "semantic_enterprise_class": "supply-chain:AlternateSource",
+      "evidence_role": "alternate-source-or-rollback-reference",
+      "required_fields": ["rollback_id", "source_path", "previous_state_ref", "trust_level"]
+    }
+  ],
+  "named_graph_contexts": [
+    {
+      "sector": "supply-chain",
+      "source_path": "examples/scenarios/supply_chain_resilience_demo.ttl",
+      "graph_uri_fragment": "graphs/scenarios/supply-chain-resilience",
+      "source_system": "Ontogenesis semantic-enterprise scenario fixture",
+      "access_class": "internal",
+      "trust_level": "curated-demo",
+      "retention_policy": "retain-current-plus-audit-history",
+      "lifecycle_phase": "KnowledgeCuration"
+    }
+  ],
+  "sourceos_fixture": {
+    "artifact_id": "sourceos-demo-release-component",
+    "release_tag": "semantic-enterprise-v0.1.0",
+    "state_context": "local-first-state-integrity-demo",
+    "graph_uri_fragment": "graphs/scenarios/supply-chain-resilience",
+    "trust_level": "curated-demo",
+    "access_class": "internal",
+    "operator_narrative": "Semantic Enterprise supply-chain provenance is mapped into SourceOS state integrity evidence without mutating Ontogenesis source semantics."
+  },
+  "closure_model": {
+    "inside_source": "Ontogenesis authors the semantic source modules and supply-chain scenario.",
+    "outside_state_runtime": "SourceOS syncd maps semantic provenance into local-first state integrity evidence.",
+    "boundary_membrane": "Release tag, source path, graph URI, trust level, access class, retention policy, and lifecycle phase must survive translation.",
+    "feedback_surface": "SourceOS repair, rollback, and state reports remain downstream evidence and do not mutate Ontogenesis source semantics."
+  }
+}
