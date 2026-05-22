@@ -10,6 +10,15 @@
   "schema_version": "v1",
   "severity": "review_required",
   "merge_policy": "human_review_required",
+  "decision_card": {
+    "card_id": "decision-card:conflict-alpha-001",
+    "options": ["merge", "fork", "skip"],
+    "recommended_option": "merge",
+    "selected_option": "fork",
+    "rationale": "Payload lineage diverged after remote replay; preserve both versions for review.",
+    "selected_by": "actor:local-user",
+    "selected_at": "2026-05-05T00:07:30Z"
+  },
   "user_explanation": "Two scoped actors produced competing updates for the same object fixture.",
   "created_at": "2026-05-05T00:07:00Z"
 }

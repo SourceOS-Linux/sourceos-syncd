@@ -1,0 +1,32 @@
+{
+  "schema": "sourceos.workspace-operation/v1alpha1",
+  "operation_id": "workspace-operation:alpha-001",
+  "local_operation_id": "local-op:0001",
+  "remote_operation_id": "remote-op:9931",
+  "operation_type": "sync.operation.reconcile",
+  "status": "reconciled",
+  "workspace_id": "workspace:default",
+  "profile_id": "profile:local-dev",
+  "actor_id": "actor:agent-one",
+  "device_id": "device:local",
+  "encryption_profile_ref": "encryption-profile:local-default",
+  "local_log_ref": "journal:evt-00000001",
+  "checkpoint_ref": "checkpoint:workspace-default-0001",
+  "causal_parent_ids": ["local-op:0000"],
+  "conflict_ids": ["conflict:alpha-001"],
+  "provisional_artifact_ids": {
+    "artifact:temp-1": "object:alpha"
+  },
+  "artifact_reconciliation": {
+    "artifact:temp-1": "artifact:final-44"
+  },
+  "policy_decision_ref": "policy-decision:review-alpha",
+  "artifact_admission_ref": "artifact-admission:alpha-allow",
+  "ledger_evidence_refs": ["evidence:operation-0001"],
+  "replay_safe": true,
+  "stale_task": false,
+  "lease_expired": false,
+  "replay_idempotency_key": "idem-replay-alpha-0001",
+  "created_at": "2026-05-05T00:10:00Z",
+  "updated_at": "2026-05-05T00:10:05Z"
+}
