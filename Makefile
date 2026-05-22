@@ -6,25 +6,7 @@ install-dev:
 	python3 -m pip install -r requirements-dev.txt
 
 validate-json:
-	python3 - <<'PY'
-	import json
-	import pathlib
-	import sys
-
-	failed = False
-	for root in (pathlib.Path('schemas'), pathlib.Path('examples')):
-	    if not root.exists():
-	        continue
-	    for path in sorted(root.rglob('*.json')):
-	        try:
-	            json.loads(path.read_text())
-	        except Exception as exc:
-	            print(f'{path}: invalid JSON: {exc}', file=sys.stderr)
-	            failed = True
-	if failed:
-	    raise SystemExit(1)
-	print('JSON syntax validated.')
-	PY
+	python3 -c "import json, pathlib, sys; failed=False; roots=(pathlib.Path('schemas'), pathlib.Path('examples'));\nfor root in roots:\n    if not root.exists():\n        continue\n    for path in sorted(root.rglob('*.json')):\n        try:\n            json.loads(path.read_text())\n        except Exception as exc:\n            print(f'{path}: invalid JSON: {exc}', file=sys.stderr); failed=True\nif failed:\n    raise SystemExit(1)\nprint('JSON syntax validated.')"
 
 validate-schemas:
 	python3 tools/validate_json_schemas.py
