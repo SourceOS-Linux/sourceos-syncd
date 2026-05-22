@@ -12,11 +12,13 @@ from sourceos_syncd.contracts import (
     ContractError,
     DeviceTrustRecord,
     IntegrityEventRecord,
+    OperationTaskRecord,
     PolicyDecisionRecord,
     ProfileRecord,
     SchemaContractRecord,
     SourceObjectRecord,
     SyncPlanRecord,
+    WorkspaceOperationRecord,
     to_json_dict,
     validate_contract,
 )
@@ -34,6 +36,8 @@ EXPECTED_SCHEMAS = {
     "sourceos.policy-decision/v1alpha1",
     "sourceos.integrity-event/v1alpha1",
     "sourceos.agent-object-transaction/v1alpha1",
+    "sourceos.workspace-operation/v1alpha1",
+    "sourceos.operation-task/v1alpha1",
 }
 
 
@@ -84,6 +88,8 @@ def test_each_contract_type_round_trips_from_fixture() -> None:
         "policy.decision-review.json": PolicyDecisionRecord,
         "event.object-alpha-created.json": IntegrityEventRecord,
         "agent-transaction.alpha.json": AgentObjectTransactionRecord,
+        "workspace-operation.alpha.json": WorkspaceOperationRecord,
+        "operation-task.alpha.json": OperationTaskRecord,
     }
 
     for fixture, contract_type in mapping.items():
@@ -129,6 +135,22 @@ def test_conflict_severity_validation_rejects_unknown_severity() -> None:
     record["severity"] = "panic"
 
     with pytest.raises(ContractError, match="severity"):
+        validate_contract(record)
+
+
+def test_workspace_operation_validation_rejects_unknown_operation_type() -> None:
+    record = load_example("workspace-operation.alpha.json")
+    record["operation_type"] = "sync.operation.unknown"
+
+    with pytest.raises(ContractError, match="operation_type"):
+        validate_contract(record)
+
+
+def test_conflict_decision_card_validation_rejects_unknown_option() -> None:
+    record = load_example("conflict.alpha.json")
+    record["decision_card"]["options"] = ["merge", "escalate"]
+
+    with pytest.raises(ContractError, match="decision_card.options"):
         validate_contract(record)
 
 
