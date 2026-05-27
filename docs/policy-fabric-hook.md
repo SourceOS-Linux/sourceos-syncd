@@ -41,8 +41,43 @@ Decision fields:
   "reason": "secure_lane_requires_explicit_grant",
   "subject": "sourceos-syncd",
   "object_id": null,
-  "data_class": "internal"
+  "data_class": "internal",
+  "decision_boundary": {
+    "decision_scope": "policy-only",
+    "runtime_effect_performed": false,
+    "authority_mutation_performed": false,
+    "state_repair_performed": false,
+    "ledger_write_performed": false,
+    "downstream_refs": [
+      "SourceOS-Linux/sourceos-spec#113",
+      "SourceOS-Linux/sourceos-syncd#30"
+    ]
+  }
 }
+```
+
+## Boundary invariant
+
+The local hook emits policy decisions only.
+
+It does not perform:
+
+- runtime effects;
+- agent grant or authority mutation;
+- state repair;
+- ledger writes;
+- replication;
+- bridge export;
+- memory writeback.
+
+The hard chain is:
+
+```text
+state observation/report input = evidence
+policy decision = local or remote policy evaluation
+runtime effect = separate admission/effect decision
+authority/grant mutation = separate Agent Registry / grant-state decision
+state integrity report = ledger/report evidence only
 ```
 
 ## Local default behavior
@@ -85,7 +120,7 @@ Store-backed reports now include local policy evaluation output:
 }
 ```
 
-The top-level `policy.policy_decisions` field remains numeric and dashboard-friendly. Detailed sample decisions live under `diagnosis.policy` so the State Integrity Report top-level contract remains closed.
+The top-level `policy.policy_decisions` field remains numeric and dashboard-friendly. Detailed sample decisions live under `diagnosis.policy` so the State Integrity Report top-level contract remains closed. Every sample decision carries `decision_boundary` so report readers can distinguish policy evaluation from runtime action.
 
 ## Intended PolicyFabric replacement path
 
@@ -94,14 +129,21 @@ The local stub should later be replaced by a PolicyFabric client that preserves 
 1. Build `PolicyRequest` from lane, action, subject, object, and data class.
 2. Send request to PolicyFabric.
 3. Receive `sourceos.policy-decision/v1alpha1` response.
-4. Count statuses into `policy.policy_decisions`.
-5. Attach representative explanations under `diagnosis.policy.sample`.
-6. Preserve sensitive object details through redaction, not omission.
+4. Confirm `decision_boundary.decision_scope = policy-only`.
+5. Count statuses into `policy.policy_decisions`.
+6. Attach representative explanations under `diagnosis.policy.sample`.
+7. Preserve sensitive object details through redaction, not omission.
 
 ## Estate expectations
 
 - PolicyFabric owns final policy semantics.
+- SourceOS runtime-effect decisions are separate from policy decisions.
+- Agent Registry / grant-state decisions are separate from policy decisions.
 - AgentPlane consumes policy decisions before agent action.
 - Lampstand preserves significant policy decisions as evidence.
 - Delivery Excellence scores policy friction and redaction rates.
 - Secure and repair lanes fail closed until explicit grants exist.
+
+## Validation
+
+The unit tests reject policy decisions that claim to perform runtime effects or authority mutation. This prevents the local hook from becoming a hidden execution or grant-state surface.
