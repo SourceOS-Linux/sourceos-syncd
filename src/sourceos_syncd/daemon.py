@@ -51,6 +51,7 @@ class SyncDaemon:
         poll_interval_s: int = DEFAULT_POLL_INTERVAL_S,
         store_root: str | None = None,
         verify_ssl: bool = True,
+        signing_public_key: str | None = None,
     ) -> None:
         self._client = KatelloContentClient(
             base_url=katello_url,
@@ -63,6 +64,7 @@ class SyncDaemon:
         self._lifecycle_env = lifecycle_env
         self._locus = locus
         self._flake_ref = flake_ref
+        self._signing_public_key = signing_public_key
         self._poll_interval_s = poll_interval_s
         self._store = ReceiptStore(root=store_root or "/var/lib/sourceos-syncd")
         self._running = True
@@ -115,6 +117,7 @@ class SyncDaemon:
             flake_ref=self._flake_ref,
             locus=self._locus,
             current_version=current_version,
+            signing_public_key=self._signing_public_key,
         )
         plan = syncer.plan(manifest)
 
@@ -155,18 +158,30 @@ class SyncDaemon:
             time.sleep(min(5, deadline - time.monotonic()))
 
 
+def _resolve_password() -> str:
+    """Read password from KATELLO_PASSWORD or KATELLO_PASSWORD_FILE.
+
+    KATELLO_PASSWORD_FILE wins when both are set. This supports systemd
+    LoadCredential which writes the secret to a file, not an env var.
+    """
+    pw_file = os.environ.get("KATELLO_PASSWORD_FILE", "")
+    if pw_file:
+        try:
+            return open(pw_file, encoding="utf-8").read().strip()
+        except OSError as exc:
+            raise RuntimeError(f"cannot read KATELLO_PASSWORD_FILE {pw_file}: {exc}") from exc
+    pw = os.environ.get("KATELLO_PASSWORD", "")
+    if not pw:
+        raise RuntimeError("KATELLO_PASSWORD or KATELLO_PASSWORD_FILE must be set")
+    return pw
+
+
 def daemon_from_env() -> SyncDaemon:
     """Construct a SyncDaemon entirely from environment variables."""
-    def require(name: str) -> str:
-        val = os.environ.get(name, "")
-        if not val:
-            raise RuntimeError(f"required env var {name} is not set")
-        return val
-
     return SyncDaemon(
         katello_url=os.environ.get("KATELLO_URL", "https://127.0.0.1:8443"),
         katello_user=os.environ.get("KATELLO_USER", "admin"),
-        katello_password=require("KATELLO_PASSWORD"),
+        katello_password=_resolve_password(),
         org=os.environ.get("KATELLO_ORG", "SocioProphet"),
         content_view=os.environ.get("KATELLO_CONTENT_VIEW", "sourceos-builder-aarch64"),
         lifecycle_env=os.environ.get("KATELLO_LIFECYCLE_ENV", "stable"),
@@ -174,6 +189,7 @@ def daemon_from_env() -> SyncDaemon:
         flake_ref=os.environ.get(
             "SOURCEOS_FLAKE_REF", "github:SociOS-Linux/source-os#builder-aarch64"
         ),
+        signing_public_key=os.environ.get("SOURCEOS_SIGNING_PUBLIC_KEY", "") or None,
         poll_interval_s=int(os.environ.get("SOURCEOS_POLL_INTERVAL", str(DEFAULT_POLL_INTERVAL_S))),
         store_root=os.environ.get("SOURCEOS_STORE_ROOT", "/var/lib/sourceos-syncd"),
         verify_ssl=os.environ.get("SOURCEOS_NO_VERIFY_SSL", "").lower() not in ("1", "true", "yes"),

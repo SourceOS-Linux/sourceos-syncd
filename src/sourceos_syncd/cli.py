@@ -157,7 +157,7 @@ def build_parser() -> argparse.ArgumentParser:
     def add_katello_args(p: argparse.ArgumentParser) -> None:
         p.add_argument("--katello-url", default="https://127.0.0.1:8443", help="Foreman+Katello base URL")
         p.add_argument("--katello-user", default="admin", help="Katello admin username")
-        p.add_argument("--katello-password", default=None, help="Katello admin password (or set KATELLO_PASSWORD env)")
+        p.add_argument("--katello-password", default=None, help="Katello admin password (or set KATELLO_PASSWORD / KATELLO_PASSWORD_FILE env)")
         p.add_argument("--org", default="SocioProphet", help="Katello organization name")
         p.add_argument("--content-view", default="sourceos-builder-aarch64", help="content view name")
         p.add_argument("--lifecycle-env", default="dev", help="lifecycle environment (dev/candidate/stable)")
@@ -165,6 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--flake-ref", default="github:SociOS-Linux/source-os#builder-aarch64", help="NixOS flake ref")
         p.add_argument("--current-version", default=None, help="current content view version (skip if up to date)")
         p.add_argument("--no-verify-ssl", action="store_true", help="skip TLS verification (local dev only)")
+        p.add_argument("--signing-public-key", default=None, help="minisign public key (RWS...) to verify nix-cache-info before applying")
 
     sync_plan = sync_sub.add_parser("plan", help="query Katello and emit a ContentSyncPlan (no changes)")
     add_katello_args(sync_plan)
@@ -317,9 +318,11 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.area == "sync" and args.command in ("plan", "apply"):
             import os
-            password = args.katello_password or os.environ.get("KATELLO_PASSWORD", "")
-            if not password:
-                sys.stderr.write(pretty_json({"error": "missing password", "message": "pass --katello-password or set KATELLO_PASSWORD"}, pretty=pretty))
+            from .daemon import _resolve_password
+            try:
+                password = args.katello_password or _resolve_password()
+            except RuntimeError as exc:
+                sys.stderr.write(pretty_json({"error": "missing password", "message": str(exc)}, pretty=pretty))
                 return 1
             client = KatelloContentClient(
                 base_url=args.katello_url,
@@ -333,6 +336,7 @@ def main(argv: list[str] | None = None) -> int:
                 flake_ref=args.flake_ref,
                 locus=args.locus,
                 current_version=args.current_version,
+                signing_public_key=getattr(args, "signing_public_key", None),
             )
             plan = syncer.plan(manifest)
             if args.command == "plan":
@@ -359,9 +363,11 @@ def main(argv: list[str] | None = None) -> int:
             if getattr(args, "from_env", False):
                 daemon = daemon_from_env()
             else:
-                password = args.katello_password or os.environ.get("KATELLO_PASSWORD", "")
-                if not password:
-                    sys.stderr.write(pretty_json({"error": "missing password", "message": "pass --katello-password or set KATELLO_PASSWORD"}, pretty=pretty))
+                from .daemon import _resolve_password
+                try:
+                    password = args.katello_password or _resolve_password()
+                except RuntimeError as exc:
+                    sys.stderr.write(pretty_json({"error": "missing password", "message": str(exc)}, pretty=pretty))
                     return 1
                 daemon = SyncDaemon(
                     katello_url=args.katello_url,
@@ -375,6 +381,7 @@ def main(argv: list[str] | None = None) -> int:
                     poll_interval_s=args.poll_interval,
                     store_root=getattr(args, "store_root", None),
                     verify_ssl=not args.no_verify_ssl,
+                    signing_public_key=getattr(args, "signing_public_key", None),
                 )
             return daemon.run()
 

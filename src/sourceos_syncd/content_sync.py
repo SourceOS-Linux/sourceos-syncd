@@ -68,6 +68,12 @@ class ContentViewSyncer:
     The syncer enforces the locus gate: only local locus is permitted for
     Phase 0. burst_cloud and attested_fog require explicit policy elevation
     (not yet implemented).
+
+    When signing_public_key is set (a minisign public key string starting
+    with "RWS..."), the plan includes a `minisign -V` step before nix copy.
+    This ensures the nix-cache-info served by Pulp was signed by the key
+    embedded in the NixOS image, preventing an unauthenticated Katello from
+    delivering arbitrary closures.
     """
 
     ALLOWED_LOCI = {"local", "trusted_private"}
@@ -77,10 +83,12 @@ class ContentViewSyncer:
         flake_ref: str = "github:SociOS-Linux/source-os#builder-aarch64",
         locus: str = "local",
         current_version: str | None = None,
+        signing_public_key: str | None = None,
     ) -> None:
         self._flake_ref = flake_ref
         self._locus = locus
         self._current_version = current_version
+        self._signing_public_key = signing_public_key
 
     def plan(self, manifest: ContentViewManifest) -> ContentSyncPlan:
         """Return a non-mutating ContentSyncPlan. No I/O performed."""
@@ -115,8 +123,24 @@ class ContentViewSyncer:
                 steps=[],
             )
 
-        steps = [
-            f"nix copy --from '{manifest.nix_cache_url}' --no-check-sigs '{self._flake_ref}'",
+        steps = []
+
+        # Verify nix-cache-info signature before pulling any closures.
+        # The public key is the one baked into the NixOS image — an
+        # unauthenticated Katello cannot deliver closures without knowing the
+        # private key held by the build pipeline.
+        if self._signing_public_key:
+            cache_info_url = f"{manifest.nix_cache_url}/nix-cache-info"
+            steps += [
+                f"curl -fsSL '{cache_info_url}' -o /tmp/sourceos-nix-cache-info",
+                f"curl -fsSL '{cache_info_url}.minisig' -o /tmp/sourceos-nix-cache-info.minisig",
+                f"minisign -V -P '{self._signing_public_key}'"
+                f" -m /tmp/sourceos-nix-cache-info"
+                f" -x /tmp/sourceos-nix-cache-info.minisig",
+            ]
+
+        steps += [
+            f"nix copy --from '{manifest.nix_cache_url}' '{self._flake_ref}'",
             f"nixos-rebuild switch --flake '{self._flake_ref}'",
         ]
 
