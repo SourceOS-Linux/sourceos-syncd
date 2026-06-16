@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 POLICY_DECISION_SCHEMA = "sourceos.policy-decision/v1alpha1"
-POLICY_ENGINE = "policy-fabric-local-stub"
+POLICY_ENGINE = "policy-fabric-local"
 DECISION_SCOPE = "policy-only"
 
 ACTIONS = {
@@ -125,6 +125,57 @@ def validate_decision_boundary(decision: dict[str, Any]) -> None:
             raise ValueError(f"policy decision must not perform {key}")
 
 
+class RemotePolicyFabricClient:
+    """Delegates policy evaluation to a remote PolicyFabric service.
+
+    Falls back gracefully (returns None) on any network error or timeout.
+    Set SOURCEOS_POLICY_FABRIC_URL to enable; evaluate_policy() checks this env var.
+
+    Remote endpoint: POST {base_url}/v1/evaluate
+    Request body: JSON matching PolicyRequest fields.
+    Response: JSON matching PolicyDecision fields.
+    """
+
+    def __init__(self, base_url: str, timeout_s: float = 2.0) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout_s = timeout_s
+
+    def evaluate(self, request: PolicyRequest) -> PolicyDecision | None:
+        import json as _json
+        import urllib.request as _urllib
+
+        body = _json.dumps({
+            "action": request.action,
+            "lane": request.lane,
+            "subject": request.subject,
+            "object_id": request.object_id,
+            "data_class": request.data_class,
+            "context": request.context,
+        }).encode("utf-8")
+        req = _urllib.Request(
+            f"{self._base_url}/v1/evaluate",
+            data=body,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        try:
+            with _urllib.urlopen(req, timeout=self._timeout_s) as resp:
+                data = _json.loads(resp.read().decode("utf-8"))
+            return PolicyDecision(
+                decision_id=str(data["decision_id"]),
+                action=str(data["action"]),
+                lane=str(data["lane"]),
+                status=str(data["status"]),
+                reason=str(data.get("reason", "remote")),
+                subject=str(data.get("subject", request.subject)),
+                object_id=data.get("object_id"),
+                data_class=str(data.get("data_class", request.data_class)),
+                engine=self._base_url,
+            )
+        except Exception:  # noqa: BLE001
+            return None
+
+
 def _decision_id(request: PolicyRequest, status: str, reason: str) -> str:
     payload = {
         "action": request.action,
@@ -140,7 +191,21 @@ def _decision_id(request: PolicyRequest, status: str, reason: str) -> str:
 
 
 def evaluate_policy(request: PolicyRequest) -> PolicyDecision:
-    """Evaluate a local policy request with conservative SourceOS defaults."""
+    """Evaluate a policy request. Delegates to remote PolicyFabric when
+    SOURCEOS_POLICY_FABRIC_URL is set; falls back to local eval on failure."""
+    import os as _os
+    import sys as _sys
+
+    remote_url = _os.environ.get("SOURCEOS_POLICY_FABRIC_URL")
+    if remote_url:
+        result = RemotePolicyFabricClient(remote_url).evaluate(request)
+        if result is not None:
+            return result
+        print(
+            f"[policy] remote PolicyFabric at {remote_url} unreachable; using local eval",
+            file=_sys.stderr,
+        )
+
     if request.action not in ACTIONS:
         status = "deferred"
         reason = "unknown_action"

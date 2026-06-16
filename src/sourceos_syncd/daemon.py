@@ -52,6 +52,7 @@ class SyncDaemon:
         store_root: str | None = None,
         verify_ssl: bool = True,
         signing_public_key: str | None = None,
+        agentplane_run_ref: str | None = None,
     ) -> None:
         self._client = KatelloContentClient(
             base_url=katello_url,
@@ -65,6 +66,7 @@ class SyncDaemon:
         self._locus = locus
         self._flake_ref = flake_ref
         self._signing_public_key = signing_public_key
+        self._agentplane_run_ref = agentplane_run_ref
         self._poll_interval_s = poll_interval_s
         self._store = ReceiptStore(root=store_root or "/var/lib/sourceos-syncd")
         self._running = True
@@ -118,6 +120,7 @@ class SyncDaemon:
             locus=self._locus,
             current_version=current_version,
             signing_public_key=self._signing_public_key,
+            agentplane_run_ref=self._agentplane_run_ref,
         )
         plan = syncer.plan(manifest)
 
