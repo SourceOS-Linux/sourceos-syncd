@@ -84,11 +84,13 @@ class ContentViewSyncer:
         locus: str = "local",
         current_version: str | None = None,
         signing_public_key: str | None = None,
+        agentplane_run_ref: str | None = None,
     ) -> None:
         self._flake_ref = flake_ref
         self._locus = locus
         self._current_version = current_version
         self._signing_public_key = signing_public_key
+        self._agentplane_run_ref = agentplane_run_ref
 
     def plan(self, manifest: ContentViewManifest) -> ContentSyncPlan:
         """Return a non-mutating ContentSyncPlan. No I/O performed."""
@@ -260,4 +262,5 @@ class ContentViewSyncer:
             "durationMs": duration_ms,
             "issuedAt": now,
             "auditId": audit_id,
+            "agentplaneRunRef": self._agentplane_run_ref,
         }

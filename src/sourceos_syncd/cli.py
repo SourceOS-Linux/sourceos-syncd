@@ -175,6 +175,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_katello_args(sync_apply)
     sync_apply.add_argument("--execute", action="store_true", help="actually run nix copy + nixos-rebuild (default: dry-run)")
     sync_apply.add_argument("--store-root", default=None, help="persist receipt to this store root")
+    sync_apply.add_argument("--agentplane-run-ref", default=None, help="agentplane RunArtifact URN that triggered this sync cycle (optional)")
     add_compact(sync_apply)
 
     sync_daemon = sync_sub.add_parser("daemon", help="run the sync daemon (polls Katello; applies on new version)")
@@ -182,6 +183,7 @@ def build_parser() -> argparse.ArgumentParser:
     sync_daemon.add_argument("--poll-interval", type=int, default=300, help="Katello poll interval in seconds (default: 300)")
     sync_daemon.add_argument("--store-root", default=None, help="state + receipt store root (default: /var/lib/sourceos-syncd)")
     sync_daemon.add_argument("--from-env", action="store_true", help="read all config from environment variables (ignores CLI flags)")
+    sync_daemon.add_argument("--agentplane-run-ref", default=None, help="agentplane RunArtifact URN to embed in SyncCycleReceipts (optional)")
     add_compact(sync_daemon)
 
     sync_check_health = sync_sub.add_parser("check-health", help="run health checks and exit 0 if healthy, 2 if not")
@@ -341,6 +343,7 @@ def main(argv: list[str] | None = None) -> int:
                 locus=args.locus,
                 current_version=args.current_version,
                 signing_public_key=getattr(args, "signing_public_key", None),
+                agentplane_run_ref=getattr(args, "agentplane_run_ref", None),
             )
             plan = syncer.plan(manifest)
             if args.command == "plan":
@@ -386,6 +389,7 @@ def main(argv: list[str] | None = None) -> int:
                     store_root=getattr(args, "store_root", None),
                     verify_ssl=not args.no_verify_ssl,
                     signing_public_key=getattr(args, "signing_public_key", None),
+                    agentplane_run_ref=getattr(args, "agentplane_run_ref", None),
                 )
             return daemon.run()
 
