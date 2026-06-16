@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from typing import Any
 
 from .evidence import load_json_file, make_evidence, validate_evidence, write_evidence_file
 from .orchestration_events import (
@@ -18,7 +19,9 @@ from .reports import load_report, pretty_json, repair_plan, snapshot, validate_r
 from .scorecard import evaluate_scorecard, validate_scorecard
 from .store_reports import append_store_event, init_store, snapshot_from_store
 from .content_sync import ContentViewSyncer
+from .daemon import SyncDaemon, daemon_from_env
 from .katello_client import KatelloContentClient
+from .receipt_store import ReceiptStore
 from .trust import TrustRequest, evaluate_trust, validate_trust_decision
 
 
@@ -170,7 +173,31 @@ def build_parser() -> argparse.ArgumentParser:
     sync_apply = sync_sub.add_parser("apply", help="apply a ContentSyncPlan (dry-run unless --execute)")
     add_katello_args(sync_apply)
     sync_apply.add_argument("--execute", action="store_true", help="actually run nix copy + nixos-rebuild (default: dry-run)")
+    sync_apply.add_argument("--store-root", default=None, help="persist receipt to this store root")
     add_compact(sync_apply)
+
+    sync_daemon = sync_sub.add_parser("daemon", help="run the sync daemon (polls Katello; applies on new version)")
+    add_katello_args(sync_daemon)
+    sync_daemon.add_argument("--poll-interval", type=int, default=300, help="Katello poll interval in seconds (default: 300)")
+    sync_daemon.add_argument("--store-root", default=None, help="state + receipt store root (default: /var/lib/sourceos-syncd)")
+    sync_daemon.add_argument("--from-env", action="store_true", help="read all config from environment variables (ignores CLI flags)")
+    add_compact(sync_daemon)
+
+    sync_check_health = sync_sub.add_parser("check-health", help="run health checks and exit 0 if healthy, 2 if not")
+    sync_check_health.add_argument("--store-root", default=None, help="store root to inspect")
+    sync_check_health.add_argument("--katello-url", default="https://127.0.0.1:8443", help="Foreman+Katello base URL to probe")
+    sync_check_health.add_argument("--no-verify-ssl", action="store_true", help="skip TLS verification")
+    add_compact(sync_check_health)
+
+    receipts = subcommands.add_parser("receipts", help="inspect persisted SyncCycleReceipts")
+    receipts_sub = receipts.add_subparsers(dest="command", required=True)
+    receipts_list = receipts_sub.add_parser("list", help="list recent receipts")
+    receipts_list.add_argument("--store-root", default=None, help="store root")
+    receipts_list.add_argument("--limit", type=int, default=10, help="number of receipts to show")
+    add_compact(receipts_list)
+    receipts_last = receipts_sub.add_parser("last", help="show the most recent receipt")
+    receipts_last.add_argument("--store-root", default=None, help="store root")
+    add_compact(receipts_last)
 
     return parser
 
@@ -312,8 +339,105 @@ def main(argv: list[str] | None = None) -> int:
                 sys.stdout.write(pretty_json(plan.to_dict(), pretty=pretty))
                 return 0 if plan.policy_gate in ("allowed", "no-op") else 2
             result = syncer.execute(plan, dry_run=not args.execute)
+            store_root = getattr(args, "store_root", None)
+            if store_root and "receipt" in result:
+                store = ReceiptStore(root=store_root)
+                store.write_receipt(result["receipt"])
+                if result.get("status") == "applied":
+                    store.write_current_version(manifest.version)
             sys.stdout.write(pretty_json(result, pretty=pretty))
-            return 0 if result["status"] in ("dry_run", "executed") else 2
+            return 0 if result["status"] in ("dry_run", "applied") else 2
+
+        if args.area == "sync" and args.command == "daemon":
+            import logging as _logging
+            import os
+            _logging.basicConfig(
+                level=_logging.INFO,
+                format="%(asctime)s %(levelname)s %(name)s %(message)s",
+                stream=sys.stderr,
+            )
+            if getattr(args, "from_env", False):
+                daemon = daemon_from_env()
+            else:
+                password = args.katello_password or os.environ.get("KATELLO_PASSWORD", "")
+                if not password:
+                    sys.stderr.write(pretty_json({"error": "missing password", "message": "pass --katello-password or set KATELLO_PASSWORD"}, pretty=pretty))
+                    return 1
+                daemon = SyncDaemon(
+                    katello_url=args.katello_url,
+                    katello_user=args.katello_user,
+                    katello_password=password,
+                    org=args.org,
+                    content_view=args.content_view,
+                    lifecycle_env=args.lifecycle_env,
+                    locus=args.locus,
+                    flake_ref=args.flake_ref,
+                    poll_interval_s=args.poll_interval,
+                    store_root=getattr(args, "store_root", None),
+                    verify_ssl=not args.no_verify_ssl,
+                )
+            return daemon.run()
+
+        if args.area == "sync" and args.command == "check-health":
+            import os
+            import shutil
+            import urllib.request
+            store_root = getattr(args, "store_root", None) or "/var/lib/sourceos-syncd"
+            store = ReceiptStore(root=store_root)
+            checks: dict[str, Any] = {}
+
+            # last receipt outcome
+            last = store.last_receipt()
+            if last:
+                checks["last_receipt_outcome"] = last.get("outcome", "unknown")
+                checks["last_receipt_ok"] = last.get("outcome") in ("applied", "dry_run", "planned")
+            else:
+                checks["last_receipt_outcome"] = "none"
+                checks["last_receipt_ok"] = True  # no sync yet is not a failure
+
+            # nix + nixos-rebuild available
+            checks["nix_available"] = shutil.which("nix") is not None
+            checks["nixos_rebuild_available"] = shutil.which("nixos-rebuild") is not None
+
+            # Katello reachable (non-fatal: daemon tolerates network blips)
+            katello_url = getattr(args, "katello_url", "https://127.0.0.1:8443")
+            no_verify = getattr(args, "no_verify_ssl", False)
+            try:
+                import ssl
+                ctx = ssl.create_default_context()
+                if no_verify:
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
+                req = urllib.request.urlopen(
+                    f"{katello_url}/api/v2/status", context=ctx, timeout=5
+                )
+                checks["katello_reachable"] = req.status < 500
+            except Exception as exc:
+                checks["katello_reachable"] = False
+                checks["katello_error"] = str(exc)
+
+            healthy = (
+                checks.get("last_receipt_ok", True)
+                and checks.get("katello_reachable", False)
+            )
+            output = {"healthy": healthy, "checks": checks}
+            sys.stdout.write(pretty_json(output, pretty=pretty))
+            return 0 if healthy else 2
+
+        if args.area == "receipts" and args.command == "list":
+            store = ReceiptStore(root=getattr(args, "store_root", None) or "/var/lib/sourceos-syncd")
+            receipts = store.list_receipts(limit=args.limit)
+            sys.stdout.write(pretty_json(receipts, pretty=pretty))
+            return 0
+
+        if args.area == "receipts" and args.command == "last":
+            store = ReceiptStore(root=getattr(args, "store_root", None) or "/var/lib/sourceos-syncd")
+            receipt = store.last_receipt()
+            if receipt is None:
+                sys.stderr.write(pretty_json({"error": "no receipts found"}, pretty=pretty))
+                return 1
+            sys.stdout.write(pretty_json(receipt, pretty=pretty))
+            return 0
 
     except Exception as exc:  # noqa: BLE001 - CLI boundary should present clean error JSON.
         sys.stderr.write(pretty_json({"error": type(exc).__name__, "message": str(exc)}, pretty=pretty))
