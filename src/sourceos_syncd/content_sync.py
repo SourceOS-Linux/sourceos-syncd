@@ -11,15 +11,19 @@ refuse to run if the plan's policy_gate is not 'allowed'.
 
 from __future__ import annotations
 
-import hashlib
 import shutil
 import subprocess
+import time
+import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 from .katello_client import ContentViewManifest
 
 SYNC_SCHEMA = "sourceos.content-sync-plan/v0.1"
+RECEIPT_SPEC_VERSION = "0.1.0"
+RECEIPT_ENGINE_ID = "sourceos.sync.katello-content"
 
 
 @dataclass(frozen=True)
@@ -131,19 +135,33 @@ class ContentViewSyncer:
         )
 
     def execute(self, plan: ContentSyncPlan, dry_run: bool = True) -> dict[str, Any]:
-        """Execute the sync plan. dry_run=True (default) only prints steps."""
+        """Execute the sync plan. dry_run=True (default) only prints steps.
+
+        Always emits a SyncCycleReceipt in the return dict under 'receipt'.
+        """
+        cycle_id = str(uuid.uuid4())
+        t_start = time.monotonic()
 
         if not plan.allowed:
+            outcome = "denied" if plan.policy_gate == "denied" else "skipped"
+            receipt = self._build_receipt(
+                cycle_id=cycle_id,
+                plan=plan,
+                outcome=outcome,
+                steps=[],
+                duration_ms=0,
+            )
             return {
-                "status": "skipped",
+                "status": outcome,
                 "reason": plan.policy_reason,
                 "policy_gate": plan.policy_gate,
+                "receipt": receipt,
             }
 
         results = []
         for step in plan.steps:
             if dry_run:
-                results.append({"step": step, "status": "dry_run"})
+                results.append({"step": step, "status": "dry_run", "reason": "dry_run=True"})
                 continue
 
             if not shutil.which("nix") and step.startswith("nix "):
@@ -167,8 +185,55 @@ class ContentViewSyncer:
             except subprocess.TimeoutExpired:
                 results.append({"step": step, "status": "timeout"})
 
+        duration_ms = int((time.monotonic() - t_start) * 1000)
+        outcome = "dry_run" if dry_run else (
+            "applied" if all(r.get("status") in ("ok", "dry_run", "skipped") for r in results)
+            else "failed"
+        )
+        receipt = self._build_receipt(
+            cycle_id=cycle_id,
+            plan=plan,
+            outcome=outcome,
+            steps=results,
+            duration_ms=duration_ms,
+        )
         return {
-            "status": "dry_run" if dry_run else "executed",
+            "status": outcome,
             "plan": plan.to_dict(),
             "results": results,
+            "receipt": receipt,
+        }
+
+    def _build_receipt(
+        self,
+        cycle_id: str,
+        plan: ContentSyncPlan,
+        outcome: str,
+        steps: list[dict[str, Any]],
+        duration_ms: int,
+    ) -> dict[str, Any]:
+        receipt_id = f"urn:srcos:sync-receipt:{uuid.uuid4()}"
+        audit_id = f"urn:srcos:audit:{uuid.uuid4()}"
+        now = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return {
+            "id": receipt_id,
+            "type": "SyncCycleReceipt",
+            "specVersion": RECEIPT_SPEC_VERSION,
+            "cycleId": cycle_id,
+            "engineId": RECEIPT_ENGINE_ID,
+            "org": plan.org,
+            "contentView": plan.content_view,
+            "fromVersion": plan.from_version,
+            "toVersion": plan.to_version,
+            "lifecycleEnv": plan.lifecycle_env,
+            "locus": self._locus,
+            "outcome": outcome,
+            "policyGate": plan.policy_gate,
+            "policyReason": plan.policy_reason,
+            "steps": steps,
+            "nixCacheUrl": plan.nix_cache_url,
+            "flakeRef": plan.flake_ref,
+            "durationMs": duration_ms,
+            "issuedAt": now,
+            "auditId": audit_id,
         }

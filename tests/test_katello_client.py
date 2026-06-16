@@ -104,8 +104,10 @@ def test_execute_dry_run_denied():
     syncer = ContentViewSyncer(locus="burst_cloud")
     plan = syncer.plan(make_manifest(version="1.0"))
     result = syncer.execute(plan, dry_run=True)
-    assert result["status"] == "skipped"
+    assert result["status"] == "denied"
     assert "policy_gate" in result
+    assert "receipt" in result
+    assert result["receipt"]["outcome"] == "denied"
 
 
 def test_execute_dry_run_noop():
