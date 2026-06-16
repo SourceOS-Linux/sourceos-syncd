@@ -190,6 +190,10 @@ def build_parser() -> argparse.ArgumentParser:
     sync_check_health.add_argument("--no-verify-ssl", action="store_true", help="skip TLS verification")
     add_compact(sync_check_health)
 
+    sync_status = sync_sub.add_parser("status", help="show daemon and sync status at a glance")
+    sync_status.add_argument("--store-root", default=None, help="store root (default: /var/lib/sourceos-syncd)")
+    add_compact(sync_status)
+
     receipts = subcommands.add_parser("receipts", help="inspect persisted SyncCycleReceipts")
     receipts_sub = receipts.add_subparsers(dest="command", required=True)
     receipts_list = receipts_sub.add_parser("list", help="list recent receipts")
@@ -430,6 +434,57 @@ def main(argv: list[str] | None = None) -> int:
             output = {"healthy": healthy, "checks": checks}
             sys.stdout.write(pretty_json(output, pretty=pretty))
             return 0 if healthy else 2
+
+        if args.area == "sync" and args.command == "status":
+            import datetime
+            import subprocess as _sp
+            store_root = getattr(args, "store_root", None) or "/var/lib/sourceos-syncd"
+            store = ReceiptStore(root=store_root)
+            last = store.last_receipt()
+            current_version = store.read_current_version()
+            receipt_count = len(store.list_receipts(limit=100))
+
+            # Probe systemd without failing on non-systemd hosts.
+            try:
+                _r = _sp.run(
+                    ["systemctl", "is-active", "sourceos-syncd"],
+                    capture_output=True, text=True, timeout=3,
+                )
+                daemon_state = _r.stdout.strip() or "unknown"
+            except Exception:
+                daemon_state = "unknown"
+
+            last_receipt_summary: Any = None
+            if last:
+                issued = last.get("issuedAt", "")
+                age_s: int | None = None
+                try:
+                    ts = datetime.datetime.fromisoformat(issued.replace("Z", "+00:00"))
+                    now = datetime.datetime.now(datetime.timezone.utc)
+                    age_s = int((now - ts).total_seconds())
+                except Exception:
+                    pass
+                last_receipt_summary = {
+                    "issuedAt": issued,
+                    "outcome": last.get("outcome"),
+                    "ageSeconds": age_s,
+                }
+
+            _good_outcomes = {"applied", "dry_run", "planned", "no_change"}
+            healthy = (
+                daemon_state == "active"
+                and (last_receipt_summary is None
+                     or last_receipt_summary.get("outcome") in _good_outcomes)
+            )
+            status_payload: dict[str, Any] = {
+                "daemon": daemon_state,
+                "currentVersion": current_version,
+                "lastReceipt": last_receipt_summary,
+                "storeReceipts": receipt_count,
+                "healthy": healthy,
+            }
+            sys.stdout.write(pretty_json(status_payload, pretty=pretty))
+            return 0 if healthy else 1
 
         if args.area == "receipts" and args.command == "list":
             store = ReceiptStore(root=getattr(args, "store_root", None) or "/var/lib/sourceos-syncd")
