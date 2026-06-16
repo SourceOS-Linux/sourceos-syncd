@@ -50,6 +50,29 @@ def test_plan_allowed_new_version():
     assert plan.allowed
     assert any("nix copy" in s for s in plan.steps)
     assert any("nixos-rebuild" in s for s in plan.steps)
+    # no signing steps when key not configured
+    assert not any("minisign" in s for s in plan.steps)
+
+
+def test_plan_with_signing_key_prepends_verify_steps():
+    pub_key = "RWSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    syncer = ContentViewSyncer(locus="local", current_version="0.9", signing_public_key=pub_key)
+    plan = syncer.plan(make_manifest(version="1.0"))
+    assert plan.allowed
+    step_cmds = " ".join(plan.steps)
+    assert "minisign" in step_cmds
+    assert "nix-cache-info" in step_cmds
+    # verify step must come before nix copy
+    minisign_idx = next(i for i, s in enumerate(plan.steps) if "minisign" in s)
+    nix_copy_idx = next(i for i, s in enumerate(plan.steps) if "nix copy" in s)
+    assert minisign_idx < nix_copy_idx
+
+
+def test_plan_with_signing_key_embeds_public_key():
+    pub_key = "RWSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    syncer = ContentViewSyncer(locus="local", signing_public_key=pub_key)
+    plan = syncer.plan(make_manifest(version="1.0"))
+    assert any(pub_key in s for s in plan.steps)
 
 
 def test_plan_noop_same_version():
