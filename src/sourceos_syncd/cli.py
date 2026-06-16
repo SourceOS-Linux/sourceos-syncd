@@ -17,6 +17,8 @@ from .orchestration_events import (
 from .reports import load_report, pretty_json, repair_plan, snapshot, validate_report, verify, with_fresh_diagnosis
 from .scorecard import evaluate_scorecard, validate_scorecard
 from .store_reports import append_store_event, init_store, snapshot_from_store
+from .content_sync import ContentViewSyncer
+from .katello_client import KatelloContentClient
 from .trust import TrustRequest, evaluate_trust, validate_trust_decision
 
 
@@ -146,6 +148,30 @@ def build_parser() -> argparse.ArgumentParser:
     score_validate.add_argument("--file", "-f", required=True, help="scorecard JSON file")
     add_compact(score_validate)
 
+    sync = subcommands.add_parser("sync", help="Katello content view sync planning and apply")
+    sync_sub = sync.add_subparsers(dest="command", required=True)
+
+    def add_katello_args(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--katello-url", default="https://127.0.0.1:8443", help="Foreman+Katello base URL")
+        p.add_argument("--katello-user", default="admin", help="Katello admin username")
+        p.add_argument("--katello-password", default=None, help="Katello admin password (or set KATELLO_PASSWORD env)")
+        p.add_argument("--org", default="SocioProphet", help="Katello organization name")
+        p.add_argument("--content-view", default="sourceos-builder-aarch64", help="content view name")
+        p.add_argument("--lifecycle-env", default="dev", help="lifecycle environment (dev/candidate/stable)")
+        p.add_argument("--locus", default="local", help="execution locus (local/trusted_private)")
+        p.add_argument("--flake-ref", default="github:SociOS-Linux/source-os#builder-aarch64", help="NixOS flake ref")
+        p.add_argument("--current-version", default=None, help="current content view version (skip if up to date)")
+        p.add_argument("--no-verify-ssl", action="store_true", help="skip TLS verification (local dev only)")
+
+    sync_plan = sync_sub.add_parser("plan", help="query Katello and emit a ContentSyncPlan (no changes)")
+    add_katello_args(sync_plan)
+    add_compact(sync_plan)
+
+    sync_apply = sync_sub.add_parser("apply", help="apply a ContentSyncPlan (dry-run unless --execute)")
+    add_katello_args(sync_apply)
+    sync_apply.add_argument("--execute", action="store_true", help="actually run nix copy + nixos-rebuild (default: dry-run)")
+    add_compact(sync_apply)
+
     return parser
 
 
@@ -261,6 +287,33 @@ def main(argv: list[str] | None = None) -> int:
             errors = validate_scorecard(scorecard)
             sys.stdout.write(pretty_json({"valid": not errors, "errors": errors}, pretty=pretty))
             return 0 if not errors else 2
+
+        if args.area == "sync" and args.command in ("plan", "apply"):
+            import os
+            password = args.katello_password or os.environ.get("KATELLO_PASSWORD", "")
+            if not password:
+                sys.stderr.write(pretty_json({"error": "missing password", "message": "pass --katello-password or set KATELLO_PASSWORD"}, pretty=pretty))
+                return 1
+            client = KatelloContentClient(
+                base_url=args.katello_url,
+                username=args.katello_user,
+                password=password,
+                org=args.org,
+                verify_ssl=not args.no_verify_ssl,
+            )
+            manifest = client.get_latest_version(args.content_view, args.lifecycle_env)
+            syncer = ContentViewSyncer(
+                flake_ref=args.flake_ref,
+                locus=args.locus,
+                current_version=args.current_version,
+            )
+            plan = syncer.plan(manifest)
+            if args.command == "plan":
+                sys.stdout.write(pretty_json(plan.to_dict(), pretty=pretty))
+                return 0 if plan.policy_gate in ("allowed", "no-op") else 2
+            result = syncer.execute(plan, dry_run=not args.execute)
+            sys.stdout.write(pretty_json(result, pretty=pretty))
+            return 0 if result["status"] in ("dry_run", "executed") else 2
 
     except Exception as exc:  # noqa: BLE001 - CLI boundary should present clean error JSON.
         sys.stderr.write(pretty_json({"error": type(exc).__name__, "message": str(exc)}, pretty=pretty))
