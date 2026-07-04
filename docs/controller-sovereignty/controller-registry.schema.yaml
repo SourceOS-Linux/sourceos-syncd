@@ -1,0 +1,106 @@
+version: 0.1
+controller:
+  id: com.sourceos.example
+  name: Example Controller
+  owner:
+    organization: SourceOS
+    trust_domain: first_party
+
+  binaries:
+    - path: <controller-binary-path>
+      signing_id: <signing-id>
+      team_id: <team-id>
+
+  launchd_services:
+    system: []
+    user: []
+
+  trigger_model:
+    startup: false
+    login: false
+    scheduled_activity: false
+    push_event: false
+    network_event: false
+    filesystem_event: false
+    foreground_user_action: false
+    schedule_policy: maintenance_window_only
+
+  capabilities:
+    network:
+      physical_wifi: false
+      peer_to_peer_wifi: false
+      low_power_network_presence: false
+      tunnels: false
+      dns: false
+      proxy: false
+      outbound_sockets: false
+      inbound_sockets: false
+      bssid_queries: false
+      location_inference: false
+    storage:
+      read_user_files: false
+      write_user_files: false
+      mutate_database: false
+      index_files: false
+      filesystem_traversal: false
+      cache_management: false
+    cloud:
+      sync: false
+      push_receive: false
+      push_send: false
+      private_cloud_compute: false
+      cross_device_pairing: false
+    compute:
+      cpu_allowed: true
+      gpu_allowed: false
+      neural_engine_allowed: false
+      background_threads: true
+    power:
+      allowed_while_idle: false
+      allowed_on_battery: false
+      allowed_during_sleep: false
+      may_wake_device: false
+
+  budgets:
+    cpu:
+      max_percent: 10
+      max_duration_seconds: 300
+      action_on_exceed: pause_and_notify
+    memory:
+      max_rss_mb: 512
+      action_on_exceed: notify
+    disk_writes:
+      max_mb_per_hour: 100
+      max_mb_per_day: 500
+      action_on_exceed: pause_and_notify
+    network:
+      max_mb_per_hour: 100
+      allowed_destinations: []
+      action_on_exceed: pause_and_notify
+
+  allowed_states:
+    foreground: true
+    background: false
+    idle: false
+    locked: false
+    sleep: false
+
+  observability:
+    audit_log: <controller-audit-log-path>
+    metrics:
+      - cpu
+      - memory
+      - disk_writes
+      - network_bytes
+      - files_touched
+      - sockets_opened
+      - wake_events
+    user_visible: true
+    dashboard_group: Example
+
+  controls:
+    pause: true
+    resume: true
+    disable: true
+    require_user_approval_for_budget_excess: true
+    require_user_approval_for_new_capability: true

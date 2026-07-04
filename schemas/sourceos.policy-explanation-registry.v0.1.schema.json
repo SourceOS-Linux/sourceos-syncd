@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sourceos.dev/schemas/sourceos.policy-explanation-registry.v0.1.schema.json",
+  "title": "SourceOS Policy Explanation Code Registry",
+  "description": "Registry of policy explanation codes used to normalize SourceOS policy.decision events.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "codes"],
+  "properties": {
+    "schema_version": {
+      "const": "sourceos.policy-explanation-registry.v0.1"
+    },
+    "codes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "title",
+          "domain",
+          "result",
+          "semantic_outcome",
+          "severity",
+          "risk",
+          "default_summary",
+          "default_why",
+          "default_next_action",
+          "allowed_operation_classes",
+          "allowed_target_classes"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "domain": {
+            "enum": ["filesystem", "network", "trust", "identity", "ipc", "sync", "agent", "package", "power", "generic"]
+          },
+          "result": {
+            "enum": ["allow", "deny", "defer", "degrade"]
+          },
+          "semantic_outcome": {
+            "enum": ["allowed", "blocked_expected", "blocked_unexpected", "blocked_attack_like", "degraded", "failed", "observed"]
+          },
+          "severity": {
+            "enum": ["trace", "debug", "info", "notice", "warning", "error", "critical"]
+          },
+          "risk": {
+            "enum": ["none", "low", "medium", "high", "critical", "unknown"]
+          },
+          "default_summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default_why": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default_next_action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allowed_operation_classes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "allowed_target_classes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "allow_stricter_severity": {
+            "type": "boolean",
+            "default": true
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "uniqueItems": true
+    }
+  }
+}

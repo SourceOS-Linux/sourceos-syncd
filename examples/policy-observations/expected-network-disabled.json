@@ -1,0 +1,42 @@
+{
+  "schema_version": "sourceos.policy-observation.v0.1",
+  "observation_id": "policy_expected_network_disabled_trust_lookup",
+  "explanation_code": "POLICY_EXPECTED_NETWORK_DISABLED",
+  "policy_bundle": "sourceos.baseline.trust",
+  "policy_rule": "trust.local-first.network-disabled-by-default",
+  "actor": {
+    "actor_id": "actor_trust_engine",
+    "actor_type": "service",
+    "display_name": "local-first trust engine",
+    "uid": "system-service",
+    "session_id": null,
+    "authority_domain": "system_service"
+  },
+  "subject": {
+    "type": "ipc_service",
+    "id": "svc_trust_network_lookup",
+    "display": "network trust lookup service"
+  },
+  "operation": "trust.network.lookup",
+  "target_class": "trust_service",
+  "result": "deny",
+  "causality": {
+    "parent_event_id": "evt_trust_local_first_20260504_192158",
+    "root_event_id": "evt_shell_launch_20260504_192158",
+    "trace_id": "trace_shell_launch_20260504_192158",
+    "span_id": "span_policy_network_disabled"
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": []
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_policy_obs_network_disabled",
+      "source": "policy-engine",
+      "raw_ref": "policy:trust.local-first.network-disabled-by-default",
+      "summary": "Trust lookup remained local-first and did not silently reach the network."
+    }
+  ]
+}

@@ -18,7 +18,7 @@ This repository is the canonical home for the SourceOS State Integrity Report, I
 - **Attested operations**: Lampstand preserves important state reports and repair actions as signed evidence.
 - **Telemetry signal control**: raw logs are evidence, not the product; expected policy blocks are classified correctly and duplicate noise is coalesced.
 - **Operator narrative**: SourceOS explains what happened, why policy acted, what risk remains, and what action is required.
-- **Control-plane receipts**: events, services, capabilities, launch manifests, and incident bundles share one typed vocabulary.
+- **Control-plane receipts**: events, services, capabilities, launch manifests, process provenance, and incident bundles share one typed vocabulary.
 
 ## Specs
 
@@ -40,6 +40,7 @@ State integrity:
 Control plane:
 
 - [`schemas/sourceos.event.v0.1.schema.json`](schemas/sourceos.event.v0.1.schema.json)
+- [`schemas/sourceos.process-provenance.v0.1.schema.json`](schemas/sourceos.process-provenance.v0.1.schema.json)
 - [`schemas/sourceos-event.schema.json`](schemas/sourceos-event.schema.json)
 - [`schemas/sourceos-service.schema.json`](schemas/sourceos-service.schema.json)
 - [`schemas/sourceos-capability.schema.json`](schemas/sourceos-capability.schema.json)
@@ -61,9 +62,12 @@ Control plane:
 - [`examples/events/apple-mdm-entitlement-denial.coalesced.json`](examples/events/apple-mdm-entitlement-denial.coalesced.json)
 - [`examples/events/apple-darkwake-network-receipt.json`](examples/events/apple-darkwake-network-receipt.json)
 - [`examples/events/invalid/missing-operator-narrative.json`](examples/events/invalid/missing-operator-narrative.json)
+- [`examples/process-provenance/package-shell.provenance.json`](examples/process-provenance/package-shell.provenance.json)
+- [`examples/process-provenance/invalid/bad-path-class.provenance.json`](examples/process-provenance/invalid/bad-path-class.provenance.json)
 - [`examples/services/bearbrowser.service.json`](examples/services/bearbrowser.service.json)
 - [`examples/capabilities/browser-gpu-spawn.capability.json`](examples/capabilities/browser-gpu-spawn.capability.json)
 - [`examples/launch/bearbrowser.launch-manifest.json`](examples/launch/bearbrowser.launch-manifest.json)
+- [`examples/launch/invalid/bearbrowser-upstream-leak.launch-manifest.json`](examples/launch/invalid/bearbrowser-upstream-leak.launch-manifest.json)
 - [`examples/incidents/bearbrowser-identity-leak.incident.json`](examples/incidents/bearbrowser-identity-leak.incident.json)
 
 ## Validation
@@ -75,7 +79,7 @@ make install-dev
 make validate
 ```
 
-`make validate` runs JSON syntax checks, full Draft 2020-12 schema validation, semantic control-plane invariants, event CLI smoke checks, append-only event-store smoke checks, and strict positive/negative event-fixture tests.
+`make validate` runs JSON syntax checks, full Draft 2020-12 schema validation, semantic control-plane invariants, event CLI smoke checks, append-only event-store smoke checks, strict positive/negative event-fixture tests, product identity audit smoke checks, process provenance checks, and service graph checks.
 
 The bootstrap validator remains standard-library-only:
 
@@ -123,6 +127,29 @@ python3 tools/sourceos_eventctl.py verify-store --store .sourceos/events.jsonl -
 ```
 
 The CLI is intentionally small. It is a seed for the eventual `sourceos events validate`, `sourceos events explain`, `sourceos events emit`, and `sourceos events store` commands.
+
+## Service graph seed
+
+`tools/sourceos_service_graph.py` validates service manifests, checks release-gate invariants, and emits a service/capability graph summary.
+
+```bash
+python3 tools/sourceos_service_graph.py validate examples/services/*.json
+python3 tools/sourceos_service_graph.py graph examples/services/*.json
+python3 tools/sourceos_service_graph.py graph examples/services/*.json --json
+```
+
+The service graph currently indexes service IDs, authority domains, owners, required capabilities, optional capabilities, denied capabilities, event emission, and incident-bundle support. It also catches impossible capability overlaps, empty capability/data/trigger/resource declarations, missing event emission, missing incident bundles, app services that fail to deny upstream identity leakage, and app services that fail to explicitly deny default remote telemetry.
+
+## Process provenance seed
+
+`tools/sourceos_process_provenance.py` validates minimum process provenance tuples and emits canonical `process.exec` / `process.exit` events. This is the first implementation hook for the Apple-derived lesson that modern apps and service families need process attribution, not raw PID-only logs.
+
+```bash
+python3 tools/sourceos_process_provenance.py validate examples/process-provenance/package-shell.provenance.json
+python3 tools/sourceos_process_provenance.py emit-events examples/process-provenance/package-shell.provenance.json
+```
+
+The tuple captures PID/PPID class, UID/GID class, parent command class, environment class, launch reason, exit status, executable path class, package origin, content hash, signature state, local-first trust mode, network lookup posture, causality, and privacy handling.
 
 ## Product identity audit seed
 

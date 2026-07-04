@@ -1,0 +1,31 @@
+{
+  "schema_version": "sourceos.policy-observation.v0.1",
+  "observation_id": "invalid_expected_boundary_as_attack_like",
+  "explanation_code": "POLICY_EXPECTED_METADATA_BOUNDARY",
+  "policy_bundle": "sourceos.baseline.telemetry",
+  "policy_rule": "telemetry-agent.filesystem.executable-metadata-only",
+  "actor": {
+    "actor_id": "actor_internal_telemetry_component",
+    "actor_type": "service",
+    "display_name": "internal telemetry component",
+    "uid": "system-service",
+    "session_id": null,
+    "authority_domain": "system_service"
+  },
+  "subject": {
+    "type": "file",
+    "id": "target_package_binary_directory",
+    "display": "package-managed executable directory"
+  },
+  "operation": "file-read-data",
+  "target_class": "package_binary_directory",
+  "result": "deny",
+  "semantic_outcome": "blocked_attack_like",
+  "severity": "critical",
+  "risk": "critical",
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": ["exact_target_path"]
+  }
+}

@@ -3,6 +3,11 @@
 The real PolicyFabric service will eventually own policy evaluation. This module
 provides a local, deterministic contract-compatible evaluator so State Integrity
 Reports can already carry policy counts and explanation codes.
+
+Boundary invariant: this module emits policy decisions only. It does not perform
+runtime effects, mutate agent grants, repair state, write ledgers, or replicate
+payloads. Downstream systems must consume explicit decision refs before taking
+any action.
 """
 
 from __future__ import annotations
@@ -14,7 +19,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 POLICY_DECISION_SCHEMA = "sourceos.policy-decision/v1alpha1"
-POLICY_ENGINE = "policy-fabric-local-stub"
+POLICY_ENGINE = "policy-fabric-local"
+DECISION_SCOPE = "policy-only"
 
 ACTIONS = {
     "index",
@@ -45,6 +51,31 @@ class PolicyRequest:
 
 
 @dataclass(frozen=True)
+class DecisionBoundary:
+    """Hard boundary carried by local policy decisions."""
+
+    decision_scope: str = DECISION_SCOPE
+    runtime_effect_performed: bool = False
+    authority_mutation_performed: bool = False
+    state_repair_performed: bool = False
+    ledger_write_performed: bool = False
+    downstream_refs: tuple[str, ...] = (
+        "SourceOS-Linux/sourceos-spec#113",
+        "SourceOS-Linux/sourceos-syncd#30",
+    )
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "decision_scope": self.decision_scope,
+            "runtime_effect_performed": self.runtime_effect_performed,
+            "authority_mutation_performed": self.authority_mutation_performed,
+            "state_repair_performed": self.state_repair_performed,
+            "ledger_write_performed": self.ledger_write_performed,
+            "downstream_refs": list(self.downstream_refs),
+        }
+
+
+@dataclass(frozen=True)
 class PolicyDecision:
     decision_id: str
     action: str
@@ -57,6 +88,7 @@ class PolicyDecision:
     engine: str = POLICY_ENGINE
     schema: str = POLICY_DECISION_SCHEMA
     generated_at: str = field(default_factory=utc_now)
+    boundary: DecisionBoundary = field(default_factory=DecisionBoundary)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -71,7 +103,77 @@ class PolicyDecision:
             "subject": self.subject,
             "object_id": self.object_id,
             "data_class": self.data_class,
+            "decision_boundary": self.boundary.as_dict(),
         }
+
+
+def validate_decision_boundary(decision: dict[str, Any]) -> None:
+    """Reject collapsed policy→runtime/authority/state records."""
+
+    boundary = decision.get("decision_boundary")
+    if not isinstance(boundary, dict):
+        raise ValueError("policy decision missing decision_boundary")
+    if boundary.get("decision_scope") != DECISION_SCOPE:
+        raise ValueError("policy decision scope must be policy-only")
+    for key in (
+        "runtime_effect_performed",
+        "authority_mutation_performed",
+        "state_repair_performed",
+        "ledger_write_performed",
+    ):
+        if boundary.get(key) is not False:
+            raise ValueError(f"policy decision must not perform {key}")
+
+
+class RemotePolicyFabricClient:
+    """Delegates policy evaluation to a remote PolicyFabric service.
+
+    Falls back gracefully (returns None) on any network error or timeout.
+    Set SOURCEOS_POLICY_FABRIC_URL to enable; evaluate_policy() checks this env var.
+
+    Remote endpoint: POST {base_url}/v1/evaluate
+    Request body: JSON matching PolicyRequest fields.
+    Response: JSON matching PolicyDecision fields.
+    """
+
+    def __init__(self, base_url: str, timeout_s: float = 2.0) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout_s = timeout_s
+
+    def evaluate(self, request: PolicyRequest) -> PolicyDecision | None:
+        import json as _json
+        import urllib.request as _urllib
+
+        body = _json.dumps({
+            "action": request.action,
+            "lane": request.lane,
+            "subject": request.subject,
+            "object_id": request.object_id,
+            "data_class": request.data_class,
+            "context": request.context,
+        }).encode("utf-8")
+        req = _urllib.Request(
+            f"{self._base_url}/v1/evaluate",
+            data=body,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        try:
+            with _urllib.urlopen(req, timeout=self._timeout_s) as resp:
+                data = _json.loads(resp.read().decode("utf-8"))
+            return PolicyDecision(
+                decision_id=str(data["decision_id"]),
+                action=str(data["action"]),
+                lane=str(data["lane"]),
+                status=str(data["status"]),
+                reason=str(data.get("reason", "remote")),
+                subject=str(data.get("subject", request.subject)),
+                object_id=data.get("object_id"),
+                data_class=str(data.get("data_class", request.data_class)),
+                engine=self._base_url,
+            )
+        except Exception:  # noqa: BLE001
+            return None
 
 
 def _decision_id(request: PolicyRequest, status: str, reason: str) -> str:
@@ -89,7 +191,21 @@ def _decision_id(request: PolicyRequest, status: str, reason: str) -> str:
 
 
 def evaluate_policy(request: PolicyRequest) -> PolicyDecision:
-    """Evaluate a local policy request with conservative SourceOS defaults."""
+    """Evaluate a policy request. Delegates to remote PolicyFabric when
+    SOURCEOS_POLICY_FABRIC_URL is set; falls back to local eval on failure."""
+    import os as _os
+    import sys as _sys
+
+    remote_url = _os.environ.get("SOURCEOS_POLICY_FABRIC_URL")
+    if remote_url:
+        result = RemotePolicyFabricClient(remote_url).evaluate(request)
+        if result is not None:
+            return result
+        print(
+            f"[policy] remote PolicyFabric at {remote_url} unreachable; using local eval",
+            file=_sys.stderr,
+        )
+
     if request.action not in ACTIONS:
         status = "deferred"
         reason = "unknown_action"
@@ -131,13 +247,16 @@ def evaluate_report_policy(lanes: list[dict[str, Any]], subject: str = "sourceos
         lane_name = str(lane.get("name", "normal"))
         for action in ("index", "retain", "replicate", "agent_access"):
             decision = evaluate_policy(PolicyRequest(action=action, lane=lane_name, subject=subject))
-            decisions.append(decision.as_dict())
+            payload = decision.as_dict()
+            validate_decision_boundary(payload)
+            decisions.append(payload)
     return decisions
 
 
 def decision_counts(decisions: list[dict[str, Any]]) -> dict[str, int]:
     counts = {status: 0 for status in sorted(STATUSES)}
     for decision in decisions:
+        validate_decision_boundary(decision)
         status = str(decision.get("status", "deferred"))
         if status not in counts:
             status = "deferred"
@@ -146,6 +265,8 @@ def decision_counts(decisions: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def policy_summary(decisions: list[dict[str, Any]], sample_limit: int = 12) -> dict[str, Any]:
+    for decision in decisions:
+        validate_decision_boundary(decision)
     return {
         "engine": POLICY_ENGINE,
         "counts": decision_counts(decisions),

@@ -1,0 +1,42 @@
+{
+  "schema_version": "sourceos.policy-observation.v0.1",
+  "observation_id": "policy_degraded_trust_local_only_package_binary",
+  "explanation_code": "POLICY_DEGRADED_TRUST_LOCAL_ONLY",
+  "policy_bundle": "sourceos.baseline.trust",
+  "policy_rule": "trust.local-first.degraded-remote-evidence",
+  "actor": {
+    "actor_id": "actor_trust_engine",
+    "actor_type": "service",
+    "display_name": "local-first trust engine",
+    "uid": "system-service",
+    "session_id": null,
+    "authority_domain": "system_service"
+  },
+  "subject": {
+    "type": "process",
+    "id": "proc_package_managed_shell",
+    "display": "package-managed shell binary"
+  },
+  "operation": "trust.evaluate",
+  "target_class": "package_binary",
+  "result": "degrade",
+  "causality": {
+    "parent_event_id": "evt_shell_launch_20260504_192158",
+    "root_event_id": "evt_shell_launch_20260504_192158",
+    "trace_id": "trace_shell_launch_20260504_192158",
+    "span_id": "span_policy_degraded_trust"
+  },
+  "privacy": {
+    "tier": "user_private",
+    "redaction_policy": "preserve_causality",
+    "secret_fields": ["exact_executable_path"]
+  },
+  "evidence": [
+    {
+      "evidence_id": "ev_policy_obs_degraded_trust",
+      "source": "trust-engine",
+      "raw_ref": "trust:local-first:degraded-remote-evidence",
+      "summary": "Remote trust enrichment was unavailable or disallowed, so local-first evidence was used and degradation was preserved."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "sourceos.operation-task/v1alpha1",
+  "task_id": "operation-task:alpha-0001",
+  "operation_id": "workspace-operation:alpha-001",
+  "operation_type": "sync.operation.replay",
+  "status": "succeeded",
+  "attempt": 1,
+  "idempotency_key": "idem-replay-alpha-0001",
+  "policy_decision_ref": "policy-decision:review-alpha",
+  "evidence_refs": ["evidence:operation-task-0001"],
+  "created_at": "2026-05-05T00:10:01Z",
+  "updated_at": "2026-05-05T00:10:06Z",
+  "started_at": "2026-05-05T00:10:02Z",
+  "completed_at": "2026-05-05T00:10:06Z",
+  "remote_operation_id": "remote-op:9931",
+  "conflict_id": "conflict:alpha-001",
+  "checkpoint_ref": "checkpoint:workspace-default-0001",
+  "replay_safe": true
+}
