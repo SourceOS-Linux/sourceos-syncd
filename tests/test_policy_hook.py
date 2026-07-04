@@ -65,9 +65,9 @@ def test_report_policy_counts_include_all_statuses():
 def test_store_backed_snapshot_includes_policy_summary(tmp_path):
     init_store(tmp_path)
     report = snapshot_from_store(tmp_path)
-    assert report["policy"]["policy_engine"] == "policy-fabric-local-stub"
-    assert report["policy"]["policy_version"] == "v0.1.0-local-stub"
-    assert report["diagnosis"]["policy"]["engine"] == "policy-fabric-local-stub"
+    assert report["policy"]["policy_engine"] == "policy-fabric-local"
+    assert report["policy"]["policy_version"] == "v0.1.0-local"
+    assert report["diagnosis"]["policy"]["engine"] == "policy-fabric-local"
     assert report["diagnosis"]["policy"]["counts"]["allowed"] > 0
     sample = report["diagnosis"]["policy"]["sample"]
     assert sample

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .local_store import LocalStateStore
-from .policy import decision_counts, evaluate_report_policy, policy_summary
+from .policy import POLICY_ENGINE, decision_counts, evaluate_report_policy, policy_summary
 from .reports import controls_for, diagnose, snapshot, verify
 
 
@@ -27,8 +27,8 @@ def snapshot_from_store(root: str | Path) -> dict[str, Any]:
     report["identity"]["store_root"] = str(Path(root).expanduser().resolve())
 
     decisions = evaluate_report_policy(report["lanes"], subject="sourceos-syncd")
-    report["policy"]["policy_engine"] = "policy-fabric-local-stub"
-    report["policy"]["policy_version"] = "v0.1.0-local-stub"
+    report["policy"]["policy_engine"] = POLICY_ENGINE
+    report["policy"]["policy_version"] = "v0.1.0-local"
     report["policy"]["policy_decisions"] = decision_counts(decisions)
 
     report["diagnosis"] = diagnose(report)

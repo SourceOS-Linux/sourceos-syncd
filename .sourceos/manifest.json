@@ -1,0 +1,47 @@
+{
+  "repo": "SourceOS-Linux/sourceos-syncd",
+  "domain": "content-sync",
+  "specVersion": "0.1.0",
+  "ownedSchemas": [
+    "SyncCycleReceipt"
+  ],
+  "syncEngines": [
+    {
+      "engineId": "sourceos.sync.katello-content",
+      "collection": "katello-content-views",
+      "schemaVersion": "0.1.0",
+      "ownerRepo": "SourceOS-Linux/sourceos-syncd",
+      "defaultEnabled": true,
+      "policyClass": "high",
+      "encryptionScope": "device",
+      "mergeStrategy": "last_write_wins",
+      "supportsTombstones": false,
+      "supportsRollback": true,
+      "supportsExport": false,
+      "dangerousFields": [
+        "katello_password",
+        "nixCacheUrl"
+      ],
+      "auditEvents": [
+        "sync.cycle.planned",
+        "sync.cycle.applied",
+        "sync.cycle.denied",
+        "sync.cycle.failed"
+      ]
+    }
+  ],
+  "sourceChannels": [],
+  "policyClasses": [
+    "high"
+  ],
+  "auditEvents": [
+    "sync.cycle.planned",
+    "sync.cycle.applied",
+    "sync.cycle.denied",
+    "sync.cycle.failed"
+  ],
+  "dangerousSurfaces": [
+    "content_sync.locus_gate_bypass",
+    "content_sync.katello_credential_exposure"
+  ]
+}
