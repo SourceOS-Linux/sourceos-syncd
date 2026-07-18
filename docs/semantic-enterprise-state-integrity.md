@@ -64,5 +64,5 @@ python3 tools/validate_semantic_enterprise_state_integrity.py
 
 ## Parent work
 
-- `SourceOS-Linux/sourceos-syncd#22`
+- `SourceOS-Linux/sourceos-syncd#17`
 - `SocioProphet/delivery-excellence#21`

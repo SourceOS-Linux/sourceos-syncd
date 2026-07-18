@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
-"""Validate JSON syntax for SourceOS schema and example files."""
-
+"""Validate JSON syntax for repository schemas and examples."""
 from __future__ import annotations
 
 import json
-import pathlib
+from pathlib import Path
 import sys
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> int:
     failed = False
-    for root in (pathlib.Path("schemas"), pathlib.Path("examples")):
+    for root_name in ("schemas", "examples"):
+        root = ROOT / root_name
         if not root.exists():
             continue
         for path in sorted(root.rglob("*.json")):
             try:
                 json.loads(path.read_text(encoding="utf-8"))
-            except Exception as exc:  # pragma: no cover - diagnostic path
-                print(f"{path}: invalid JSON: {exc}", file=sys.stderr)
+            except Exception as exc:  # noqa: BLE001 - syntax validator should report any parse/read failure.
+                rel = path.relative_to(ROOT)
+                print(f"{rel}: invalid JSON: {exc}", file=sys.stderr)
                 failed = True
     if failed:
         return 1

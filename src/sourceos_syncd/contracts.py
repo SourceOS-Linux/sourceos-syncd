@@ -78,10 +78,10 @@ class JsonContract:
     """Base class for JSON-serializable contracts."""
 
     schema: ClassVar[str]
-    required_fields: ClassVar[set[str]] = set()
-    controlled_fields: ClassVar[dict[str, set[str]]] = {}
-    list_fields: ClassVar[set[str]] = set()
-    mapping_fields: ClassVar[set[str]] = set()
+    required_fields: ClassVar[set[str]]
+    controlled_fields: ClassVar[dict[str, set[str]]]
+    list_fields: ClassVar[set[str]]
+    mapping_fields: ClassVar[set[str]]
 
     def to_dict(self) -> dict[str, Any]:
         data = dataclasses.asdict(self)
@@ -92,12 +92,12 @@ class JsonContract:
     def validate_dict(cls, record: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(record, dict):
             raise ContractError(f"{cls.__name__} must be a JSON object")
-        require_fields(record, cls.required_fields, cls.__name__)
-        for field_name, allowed in cls.controlled_fields.items():
+        require_fields(record, getattr(cls, "required_fields", set()), cls.__name__)
+        for field_name, allowed in getattr(cls, "controlled_fields", {}).items():
             require_allowed(str(record.get(field_name)), allowed, field_name, cls.__name__)
-        for field_name in cls.list_fields:
+        for field_name in getattr(cls, "list_fields", set()):
             require_list(record, field_name, cls.__name__)
-        for field_name in cls.mapping_fields:
+        for field_name in getattr(cls, "mapping_fields", set()):
             require_mapping(record, field_name, cls.__name__)
         return record
 

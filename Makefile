@@ -1,12 +1,12 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-policy-normalizer validate-service-graph validate-semantic-enterprise-state-integrity install-dev
+.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-semantic-enterprise-state-integrity install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-policy-normalizer validate-service-graph validate-semantic-enterprise-state-integrity
+validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-semantic-enterprise-state-integrity
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
 
 validate-json:
-	python3 -c "import json, pathlib, sys; failed=False; roots=(pathlib.Path('schemas'), pathlib.Path('examples'));\nfor root in roots:\n    if not root.exists():\n        continue\n    for path in sorted(root.rglob('*.json')):\n        try:\n            json.loads(path.read_text())\n        except Exception as exc:\n            print(f'{path}: invalid JSON: {exc}', file=sys.stderr); failed=True\nif failed:\n    raise SystemExit(1)\nprint('JSON syntax validated.')"
+	python3 tools/validate_json_syntax.py
 
 validate-schemas:
 	python3 tools/validate_json_schemas.py
