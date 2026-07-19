@@ -167,6 +167,21 @@ def make_handler(config: ServiceConfig) -> type[BaseHTTPRequestHandler]:
                     self.write_text(HTTPStatus.OK, metrics_text(build_state_report(store_root)), "text/plain; charset=utf-8")
                 elif path == "/repairz":
                     self.write_json(HTTPStatus.OK, planning_preview(store_root))
+                elif path == "/noisez":
+                    from sourceos_syncd.noise_budget import budget_report
+                    self.write_json(HTTPStatus.OK, budget_report().to_dict())
+                elif path == "/narrativez":
+                    from sourceos_syncd.narrative import stub_narrative
+                    report = build_state_report(store_root)
+                    from sourceos_syncd.narrative import narrative_from_report
+                    narr = narrative_from_report(report)
+                    self.write_json(HTTPStatus.OK, narr.to_dict())
+                elif path == "/coherencez":
+                    from sourceos_syncd.coherence import stub_snapshot
+                    self.write_json(HTTPStatus.OK, stub_snapshot().to_dict())
+                elif path == "/authorityz":
+                    from sourceos_syncd.authority import stub_report
+                    self.write_json(HTTPStatus.OK, stub_report().to_dict())
                 else:
                     self.write_json(HTTPStatus.NOT_FOUND, {"error": "not_found", "path": path})
             except Exception as exc:  # noqa: BLE001

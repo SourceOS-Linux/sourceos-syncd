@@ -23,6 +23,12 @@ from .daemon import SyncDaemon, daemon_from_env
 from .katello_client import KatelloContentClient
 from .receipt_store import ReceiptStore
 from .trust import TrustRequest, evaluate_trust, validate_trust_decision
+from . import noise_budget as _noise_budget
+from . import narrative as _narrative
+from . import systema as _systema
+from . import coherence as _coherence
+from . import authority as _authority
+from . import harvest as _harvest
 
 
 def add_compact(parser: argparse.ArgumentParser) -> None:
@@ -205,6 +211,63 @@ def build_parser() -> argparse.ArgumentParser:
     receipts_last = receipts_sub.add_parser("last", help="show the most recent receipt")
     receipts_last.add_argument("--store-root", default=None, help="store root")
     add_compact(receipts_last)
+
+    noise = subcommands.add_parser("noise-budget", help="event coalescing and noise budget commands")
+    noise_sub = noise.add_subparsers(dest="command", required=True)
+    noise_status = noise_sub.add_parser("status", help="show current noise budget utilization")
+    add_compact(noise_status)
+    noise_flush = noise_sub.add_parser("flush", help="flush the noise budget window")
+    add_compact(noise_flush)
+
+    narrative_cmd = subcommands.add_parser("narrative", help="operator narrative summary commands")
+    narrative_sub = narrative_cmd.add_subparsers(dest="command", required=True)
+    narr_status = narrative_sub.add_parser("status", help="emit a stub operator narrative for this device")
+    narr_status.add_argument("--device-ref", default="unknown", help="device URN")
+    add_compact(narr_status)
+
+    systema_cmd = subcommands.add_parser("systema", help="Systema source-confidence and membrane commands")
+    systema_sub = systema_cmd.add_subparsers(dest="command", required=True)
+    sys_conf = systema_sub.add_parser("confidence", help="map a confidence score to SourceOS contracts")
+    sys_conf.add_argument("score", type=float, help="confidence score 0.0–1.0")
+    add_compact(sys_conf)
+    sys_mem = systema_sub.add_parser("membrane", help="map a membrane boundary event")
+    sys_mem.add_argument("kind", choices=sorted(_systema.MEMBRANE_KINDS), help="membrane kind")
+    sys_mem.add_argument("decision", choices=sorted(_systema.MEMBRANE_DECISIONS), help="membrane decision")
+    sys_mem.add_argument("--subject", required=True, help="subject URN")
+    sys_mem.add_argument("--actor", required=True, help="actor URN")
+    sys_mem.add_argument("--confidence", type=float, default=0.7, help="confidence score")
+    sys_mem.add_argument("--policy-decision-ref", default=None, help="optional policy decision URN")
+    add_compact(sys_mem)
+
+    coherence_cmd = subcommands.add_parser("coherence", help="Metadata Coherence Plane commands")
+    coherence_sub = coherence_cmd.add_subparsers(dest="command", required=True)
+    coh_status = coherence_sub.add_parser("status", help="show coherence plane snapshot")
+    coh_status.add_argument("--device-ref", default="unknown", help="device URN")
+    add_compact(coh_status)
+    coh_scan = coherence_sub.add_parser("scan", help="scan a single coherence domain")
+    coh_scan.add_argument("domain", choices=_coherence.COHERENCE_DOMAINS, help="coherence domain")
+    coh_scan.add_argument("--device-ref", default="unknown", help="device URN")
+    add_compact(coh_scan)
+
+    authority_cmd = subcommands.add_parser("authority", help="authority dependency commands")
+    authority_sub = authority_cmd.add_subparsers(dest="command", required=True)
+    auth_report = authority_sub.add_parser("report", help="show authority dependency report")
+    auth_report.add_argument("--device-ref", default="unknown", help="device URN")
+    add_compact(auth_report)
+    auth_check = authority_sub.add_parser("check", help="probe a single authority dependency")
+    auth_check.add_argument("kind", choices=sorted(_authority.AUTHORITY_KINDS), help="authority kind")
+    auth_check.add_argument("--device-ref", default="unknown", help="device URN")
+    add_compact(auth_check)
+
+    harvest_cmd = subcommands.add_parser("harvest", help="lawful metadata harvest bridge commands")
+    harvest_sub = harvest_cmd.add_subparsers(dest="command", required=True)
+    harv_wrap = harvest_sub.add_parser("wrap", help="wrap an import event in a harvest envelope")
+    harv_wrap.add_argument("--file", "-f", required=True, help="import event JSON file")
+    harv_wrap.add_argument("--basis", default="legitimate-interest", choices=sorted(_harvest.HARVEST_CONSENT_BASES), help="harvest consent basis")
+    harv_wrap.add_argument("--scope", default="metadata-only", choices=sorted(_harvest.HARVEST_SCOPES), help="harvest scope")
+    harv_wrap.add_argument("--collector-ref", default="urn:srcos:collector:sourceos-syncd:default", help="collector URN")
+    harv_wrap.add_argument("--retention-policy-ref", default="urn:srcos:retention-policy:default", help="retention policy URN")
+    add_compact(harv_wrap)
 
     return parser
 
@@ -503,6 +566,69 @@ def main(argv: list[str] | None = None) -> int:
                 sys.stderr.write(pretty_json({"error": "no receipts found"}, pretty=pretty))
                 return 1
             sys.stdout.write(pretty_json(receipt, pretty=pretty))
+            return 0
+
+        if args.area == "noise-budget" and args.command == "status":
+            report = _noise_budget.budget_report()
+            sys.stdout.write(pretty_json(report.to_dict(), pretty=pretty))
+            return 0
+
+        if args.area == "noise-budget" and args.command == "flush":
+            _noise_budget._default_engine.flush()
+            sys.stdout.write(pretty_json({"flushed": True}, pretty=pretty))
+            return 0
+
+        if args.area == "narrative" and args.command == "status":
+            narr = _narrative.stub_narrative(device_ref=args.device_ref)
+            sys.stdout.write(pretty_json(narr.to_dict(), pretty=pretty))
+            return 0
+
+        if args.area == "systema" and args.command == "confidence":
+            mapping = _systema.map_confidence(args.score)
+            sys.stdout.write(pretty_json(mapping.to_dict(), pretty=pretty))
+            return 0
+
+        if args.area == "systema" and args.command == "membrane":
+            event = _systema.map_membrane_event(
+                args.kind, args.decision,
+                subject_ref=args.subject, actor_ref=args.actor,
+                confidence=args.confidence,
+                policy_decision_ref=args.policy_decision_ref,
+            )
+            sys.stdout.write(pretty_json(event.to_dict(), pretty=pretty))
+            return 0
+
+        if args.area == "coherence" and args.command == "status":
+            snap = _coherence.stub_snapshot(device_ref=args.device_ref)
+            sys.stdout.write(pretty_json(snap.to_dict(), pretty=pretty))
+            return 0
+
+        if args.area == "coherence" and args.command == "scan":
+            state = _coherence.scan_domain(args.domain, device_ref=args.device_ref)
+            sys.stdout.write(pretty_json(state.to_dict(), pretty=pretty))
+            return 0
+
+        if args.area == "authority" and args.command == "report":
+            rpt = _authority.stub_report(device_ref=args.device_ref)
+            sys.stdout.write(pretty_json(rpt.to_dict(), pretty=pretty))
+            return 0
+
+        if args.area == "authority" and args.command == "check":
+            dep = _authority.check_authority(args.kind, device_ref=args.device_ref)
+            sys.stdout.write(pretty_json(dep.to_dict(), pretty=pretty))
+            return 0
+
+        if args.area == "harvest" and args.command == "wrap":
+            with open(args.file) as _f:
+                event_data = json.load(_f)
+            envelope = _harvest.wrap_import_event(
+                event_data,
+                harvest_basis=args.basis,
+                scope=args.scope,
+                collector_ref=args.collector_ref,
+                retention_policy_ref=args.retention_policy_ref,
+            )
+            sys.stdout.write(pretty_json(envelope.to_dict(), pretty=pretty))
             return 0
 
     except Exception as exc:  # noqa: BLE001 - CLI boundary should present clean error JSON.
