@@ -1,9 +1,12 @@
-.PHONY: validate validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-semantic-enterprise-state-integrity install-dev
+.PHONY: validate validate-manifest-declarations validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-semantic-enterprise-state-integrity install-dev
 
-validate: validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-semantic-enterprise-state-integrity
+validate: validate-manifest-declarations validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-semantic-enterprise-state-integrity
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
+
+validate-manifest-declarations:
+	python3 tools/validate_manifest_declarations.py
 
 validate-json:
 	python3 tools/validate_json_syntax.py
