@@ -207,6 +207,80 @@ def cmd_graph(args: argparse.Namespace) -> int:
     return 0
 
 
+# ── The ten release gates (README "not release-ready unless…") as an ENFORCED,
+# fail-closed audit (SP-GATE-004). Prose in a README is a claim about a gate; this
+# makes each one a check, mapped to its gate number so failures are legible.
+RELEASE_GATE_NAMES = {
+    1: "service manifest",
+    2: "emits canonical events or documents why not",
+    3: "declares required, optional and denied capabilities",
+    4: "hermetic launch manifest (if an app)",
+    5: "incident bundle for the required fault classes",
+    6: "no silent remote trust lookup",
+    7: "no remote telemetry by default",
+    8: "coalesces repeated expected denials",
+    9: "preserves privacy while retaining causal structure",
+    10: "DeliveryExcellence signal-quality metric",
+}
+REQUIRED_FAULT_CLASSES = {
+    "crashes", "denial-storms", "wake-anomalies", "identity-mismatches", "parser-faults",
+}
+
+
+def release_gate_audit(path: pathlib.Path, service: dict[str, Any]) -> list[str]:
+    """Every one of the ten release gates as a fail-closed error, mapped to its number."""
+    sid = service.get("service_id", str(path))
+    rg = service.get("release_gates") or {}
+    caps = capability_sets(service)
+    obs = service.get("observability") or {}
+    is_app = service.get("authority_domain") == "app"
+    fails: list[str] = []
+
+    def gate(n: int, ok: bool, detail: str) -> None:
+        if not ok:
+            fails.append(f"{sid}: release-gate {n} ({RELEASE_GATE_NAMES[n]}) FAILED — {detail}")
+
+    gate(1, bool(service.get("schema_version")), "no schema_version on the manifest")
+    gate(2, obs.get("emits_events") is True or bool(service.get("events_exemption")),
+         "observability.emits_events must be true, or document events_exemption")
+    gate(3, bool(caps["required"]) and "optional" in (service.get("capabilities") or {}) and bool(caps["denied"]),
+         "must declare required, optional AND (non-empty) denied capabilities")
+    gate(4, (not is_app) or bool(rg.get("hermetic_launch_manifest")),
+         "an app must declare release_gates.hermetic_launch_manifest")
+    covered = set(rg.get("incident_fault_classes") or [])
+    gate(5, obs.get("incident_bundle") is True and REQUIRED_FAULT_CLASSES <= covered,
+         f"incident bundle must cover {sorted(REQUIRED_FAULT_CLASSES)}; missing {sorted(REQUIRED_FAULT_CLASSES - covered)}")
+    gate(6, rg.get("no_silent_remote_trust") is True,
+         "must declare release_gates.no_silent_remote_trust=true")
+    gate(7, "telemetry.emit.remote.default" in caps["denied"],
+         "must deny telemetry.emit.remote.default")
+    gate(8, rg.get("coalesces_expected_denials") is True,
+         "must declare release_gates.coalesces_expected_denials=true")
+    gate(9, rg.get("privacy_causal_structure") is True,
+         "must declare release_gates.privacy_causal_structure=true")
+    gate(10, bool(rg.get("delivery_excellence_metric")),
+         "must declare release_gates.delivery_excellence_metric")
+    return fails
+
+
+def cmd_release_gates(args: argparse.Namespace) -> int:
+    services, errors = load_services(args.pattern)
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        return 1
+    all_fails: list[str] = []
+    for path, service in services:
+        all_fails.extend(release_gate_audit(path, service))
+    if all_fails:
+        for f in all_fails:
+            print(f, file=sys.stderr)
+        print(f"release-gate audit: {len(all_fails)} gate failure(s) across {len(services)} service(s)", file=sys.stderr)
+        return 1
+    print(f"release-gate audit: all ten gates pass for {len(services)} service manifest(s)")
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description="SourceOS service graph helper")
     sub = root.add_subparsers(dest="command", required=True)
@@ -219,6 +293,10 @@ def parser() -> argparse.ArgumentParser:
     graph.add_argument("pattern", nargs="*", default=["examples/services/*.json"])
     graph.add_argument("--json", action="store_true")
     graph.set_defaults(func=cmd_graph)
+
+    release_gates = sub.add_parser("release-gates", help="fail-closed audit of the ten release gates")
+    release_gates.add_argument("pattern", nargs="*", default=["examples/services/*.json"])
+    release_gates.set_defaults(func=cmd_release_gates)
 
     return root
 
