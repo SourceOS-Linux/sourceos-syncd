@@ -173,8 +173,19 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--no-verify-ssl", action="store_true", help="skip TLS verification (local dev only)")
         p.add_argument("--signing-public-key", default=None, help="minisign public key (RWS...) to verify nix-cache-info before applying")
 
+    def add_attestation_args(p: argparse.ArgumentParser) -> None:
+        # The deploy gate defaults to fail-closed: without a verified release
+        # attestation binding the target version, plan() refuses to switch.
+        p.add_argument("--attestation-file", default=None,
+                       help="path to a signed release attestation (SignedArtifact JSON) for the target version")
+        p.add_argument("--attestation-public-key", default=None,
+                       help="minisign public key the release attestation is verified against")
+        p.add_argument("--no-require-attestation", dest="require_attestation", action="store_false", default=True,
+                       help="EXPLICIT opt-out of the release-attestation gate (recorded in the receipt; unsafe)")
+
     sync_plan = sync_sub.add_parser("plan", help="query Katello and emit a ContentSyncPlan (no changes)")
     add_katello_args(sync_plan)
+    add_attestation_args(sync_plan)
     add_compact(sync_plan)
 
     sync_apply = sync_sub.add_parser("apply", help="apply a ContentSyncPlan (dry-run unless --execute)")
@@ -182,6 +193,7 @@ def build_parser() -> argparse.ArgumentParser:
     sync_apply.add_argument("--execute", action="store_true", help="actually run nix copy + nixos-rebuild (default: dry-run)")
     sync_apply.add_argument("--store-root", default=None, help="persist receipt to this store root")
     sync_apply.add_argument("--agentplane-run-ref", default=None, help="agentplane RunArtifact URN that triggered this sync cycle (optional)")
+    add_attestation_args(sync_apply)
     add_compact(sync_apply)
 
     sync_daemon = sync_sub.add_parser("daemon", help="run the sync daemon (polls Katello; applies on new version)")
@@ -401,14 +413,25 @@ def main(argv: list[str] | None = None) -> int:
                 verify_ssl=not args.no_verify_ssl,
             )
             manifest = client.get_latest_version(args.content_view, args.lifecycle_env)
+            attestation = None
+            attestation_file = getattr(args, "attestation_file", None)
+            if attestation_file:
+                try:
+                    with open(attestation_file, encoding="utf-8") as fh:
+                        attestation = json.load(fh)
+                except (OSError, ValueError) as exc:
+                    sys.stderr.write(f"error: could not read --attestation-file {attestation_file!r}: {exc}\n")
+                    return 1
             syncer = ContentViewSyncer(
                 flake_ref=args.flake_ref,
                 locus=args.locus,
                 current_version=args.current_version,
                 signing_public_key=getattr(args, "signing_public_key", None),
                 agentplane_run_ref=getattr(args, "agentplane_run_ref", None),
+                require_attestation=getattr(args, "require_attestation", True),
+                attestation_public_key=getattr(args, "attestation_public_key", None),
             )
-            plan = syncer.plan(manifest)
+            plan = syncer.plan(manifest, attestation=attestation)
             if args.command == "plan":
                 sys.stdout.write(pretty_json(plan.to_dict(), pretty=pretty))
                 return 0 if plan.policy_gate in ("allowed", "no-op") else 2

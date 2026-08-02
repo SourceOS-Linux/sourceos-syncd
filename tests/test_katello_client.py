@@ -43,8 +43,11 @@ def test_manifest_to_dict():
 
 # ── ContentViewSyncer.plan ─────────────────────────────────────────────────
 
+# These plan tests exercise the locus / nix-cache-signing paths, which are
+# orthogonal to the release-attestation gate; they opt out of it explicitly.
+# The gate itself is covered in test_content_sync_attestation.py.
 def test_plan_allowed_new_version():
-    syncer = ContentViewSyncer(locus="local", current_version="0.9")
+    syncer = ContentViewSyncer(locus="local", current_version="0.9", require_attestation=False)
     plan = syncer.plan(make_manifest(version="1.0"))
     assert plan.policy_gate == "allowed"
     assert plan.allowed
@@ -56,7 +59,7 @@ def test_plan_allowed_new_version():
 
 def test_plan_with_signing_key_prepends_verify_steps():
     pub_key = "RWSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    syncer = ContentViewSyncer(locus="local", current_version="0.9", signing_public_key=pub_key)
+    syncer = ContentViewSyncer(locus="local", current_version="0.9", signing_public_key=pub_key, require_attestation=False)
     plan = syncer.plan(make_manifest(version="1.0"))
     assert plan.allowed
     step_cmds = " ".join(plan.steps)
@@ -70,7 +73,7 @@ def test_plan_with_signing_key_prepends_verify_steps():
 
 def test_plan_with_signing_key_embeds_public_key():
     pub_key = "RWSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    syncer = ContentViewSyncer(locus="local", signing_public_key=pub_key)
+    syncer = ContentViewSyncer(locus="local", signing_public_key=pub_key, require_attestation=False)
     plan = syncer.plan(make_manifest(version="1.0"))
     assert any(pub_key in s for s in plan.steps)
 
@@ -91,20 +94,20 @@ def test_plan_denied_invalid_locus():
 
 
 def test_plan_allowed_trusted_private():
-    syncer = ContentViewSyncer(locus="trusted_private", current_version=None)
+    syncer = ContentViewSyncer(locus="trusted_private", current_version=None, require_attestation=False)
     plan = syncer.plan(make_manifest(version="2.0"))
     assert plan.policy_gate == "allowed"
 
 
 def test_plan_no_current_version_always_syncs():
-    syncer = ContentViewSyncer(locus="local", current_version=None)
+    syncer = ContentViewSyncer(locus="local", current_version=None, require_attestation=False)
     plan = syncer.plan(make_manifest(version="1.0"))
     assert plan.policy_gate == "allowed"
     assert len(plan.steps) == 2
 
 
 def test_plan_to_dict_roundtrip():
-    syncer = ContentViewSyncer(locus="local")
+    syncer = ContentViewSyncer(locus="local", require_attestation=False)
     plan = syncer.plan(make_manifest(version="1.0"))
     d = plan.to_dict()
     assert d["schema"].startswith("sourceos.content-sync-plan")
@@ -115,7 +118,7 @@ def test_plan_to_dict_roundtrip():
 # ── ContentViewSyncer.execute dry-run ─────────────────────────────────────
 
 def test_execute_dry_run_allowed():
-    syncer = ContentViewSyncer(locus="local")
+    syncer = ContentViewSyncer(locus="local", require_attestation=False)
     plan = syncer.plan(make_manifest(version="1.0"))
     result = syncer.execute(plan, dry_run=True)
     assert result["status"] == "dry_run"
