@@ -1,6 +1,6 @@
-.PHONY: validate validate-manifest-declarations validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-semantic-enterprise-state-integrity install-dev
+.PHONY: validate validate-manifest-declarations validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-release-gates validate-semantic-enterprise-state-integrity install-dev
 
-validate: validate-manifest-declarations validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-semantic-enterprise-state-integrity
+validate: validate-manifest-declarations validate-json validate-schemas validate-control-plane validate-eventctl validate-event-store validate-events validate-identity validate-process-provenance validate-service-graph validate-release-gates validate-semantic-enterprise-state-integrity
 
 install-dev:
 	python3 -m pip install -r requirements-dev.txt
@@ -56,6 +56,9 @@ validate-policy-normalizer:
 	python3 tools/sourceos_policy_normalizer.py normalize examples/policy-observations/degraded-trust-local-only.json >/dev/null
 	python3 tools/sourceos_policy_normalizer.py normalize examples/policy-observations/attack-like-privilege-boundary-probe.json >/dev/null
 	! python3 tools/sourceos_policy_normalizer.py validate-observation examples/policy-observations/invalid/expected-boundary-as-attack-like.json
+
+validate-release-gates:
+	python3 tools/sourceos_service_graph.py release-gates
 
 validate-service-graph:
 	python3 tools/sourceos_service_graph.py validate examples/services/*.json

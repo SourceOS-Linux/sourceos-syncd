@@ -54,5 +54,19 @@
     "emits_events": true,
     "health_endpoint": "local://bearbrowser/statez",
     "incident_bundle": true
+  },
+  "release_gates": {
+    "hermetic_launch_manifest": "manifests/bearbrowser.hermetic.json",
+    "incident_fault_classes": [
+      "crashes",
+      "denial-storms",
+      "wake-anomalies",
+      "identity-mismatches",
+      "parser-faults"
+    ],
+    "no_silent_remote_trust": true,
+    "coalesces_expected_denials": true,
+    "privacy_causal_structure": true,
+    "delivery_excellence_metric": "bearbrowser.delivery.signal_quality.v1"
   }
 }
