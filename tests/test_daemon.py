@@ -118,6 +118,9 @@ def test_poll_once_noop_when_current(tmp_path):
 
 def test_poll_once_writes_receipt_on_apply(tmp_path):
     daemon = _make_daemon(str(tmp_path))
+    # This test exercises the receipt-writing / version-advance mechanics; the
+    # attestation gate is covered separately, so opt out of it here explicitly.
+    daemon._require_attestation = False
     with patch.object(daemon._client, "get_latest_version", return_value=_manifest("1.0")):
         with patch("sourceos_syncd.content_sync.subprocess.run") as mock_run:
             mock_proc = MagicMock()
@@ -133,6 +136,22 @@ def test_poll_once_writes_receipt_on_apply(tmp_path):
     assert receipt is not None
     assert receipt["toVersion"] == "1.0"
     assert daemon._store.read_current_version() == "1.0"
+
+
+def test_poll_once_blocked_without_attestation_does_not_update_version(tmp_path):
+    # The deploy gate: with require_attestation on (default) and no attestation
+    # available, a new version must NOT be applied and the current version must
+    # not advance — possession of a promote credential is not runtime authority.
+    daemon = _make_daemon(str(tmp_path))
+    assert daemon._require_attestation is True
+    with patch.object(daemon._client, "get_latest_version", return_value=_manifest("1.0")):
+        daemon._poll_once()
+    receipt = daemon._store.last_receipt()
+    assert receipt is not None
+    assert receipt["policyGate"] == "blocked"
+    assert receipt["outcome"] == "blocked"
+    assert receipt["epistemicLevel"] == "Speculative"
+    assert daemon._store.read_current_version() is None
 
 
 def test_poll_once_denied_does_not_update_version(tmp_path):

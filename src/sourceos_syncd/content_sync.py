@@ -7,6 +7,14 @@ apply the new content view version.
 Boundary invariant: plan() is pure and side-effect-free. execute() is the
 only method that shells out — it requires an explicit caller opt-in and will
 refuse to run if the plan's policy_gate is not 'allowed'.
+
+Deploy gate (SP-GATE-001): when require_attestation is True (the default),
+plan() will only emit a `nixos-rebuild switch` when a signed release attestation
+binds the *specific* content-view version being switched to. Absent, mismatched,
+or unverifiable attestation → policy_gate="blocked" and NO switch step. This is
+what makes possession of the promote credential stop being runtime authority.
+execute() additionally aborts on the first failed step, so a verification that
+returns non-zero prevents the switch instead of being reported after the fact.
 """
 
 from __future__ import annotations
@@ -20,6 +28,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .katello_client import ContentViewManifest
+from .release_attestation import AttestationDecision, Verifier, verify_release_attestation
 
 SYNC_SCHEMA = "sourceos.content-sync-plan/v0.1"
 RECEIPT_SPEC_VERSION = "0.1.0"
@@ -41,6 +50,12 @@ class ContentSyncPlan:
     policy_gate: str
     policy_reason: str
     steps: list[str] = field(default_factory=list)
+    # Epistemic level of this plan's authority to switch: "Proved" only when a
+    # release attestation verified and bound this version; "Speculative" otherwise.
+    epistemic_level: str = "Speculative"
+    # The attestation decision (as_dict) when the gate ran; None when the gate was
+    # not required (an explicit, recorded opt-out — not a silent skip).
+    attestation: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -55,6 +70,8 @@ class ContentSyncPlan:
             "policy_gate": self.policy_gate,
             "policy_reason": self.policy_reason,
             "steps": self.steps,
+            "epistemic_level": self.epistemic_level,
+            "attestation": self.attestation,
         }
 
     @property
@@ -74,6 +91,13 @@ class ContentViewSyncer:
     This ensures the nix-cache-info served by Pulp was signed by the key
     embedded in the NixOS image, preventing an unauthenticated Katello from
     delivering arbitrary closures.
+
+    When require_attestation is True (default), the plan additionally REFUSES to
+    switch unless a signed release attestation binds the exact version being
+    applied — see release_attestation.verify_release_attestation. attestation_public_key
+    is the minisign key that attestation is checked against; attestation_verifier
+    is injectable for testing (default performs real minisign verification and
+    fails closed).
     """
 
     ALLOWED_LOCI = {"local", "trusted_private"}
@@ -85,14 +109,24 @@ class ContentViewSyncer:
         current_version: str | None = None,
         signing_public_key: str | None = None,
         agentplane_run_ref: str | None = None,
+        require_attestation: bool = True,
+        attestation_public_key: str | None = None,
+        attestation_verifier: Verifier | None = None,
     ) -> None:
         self._flake_ref = flake_ref
         self._locus = locus
         self._current_version = current_version
         self._signing_public_key = signing_public_key
         self._agentplane_run_ref = agentplane_run_ref
+        self._require_attestation = require_attestation
+        self._attestation_public_key = attestation_public_key
+        self._attestation_verifier = attestation_verifier
 
-    def plan(self, manifest: ContentViewManifest) -> ContentSyncPlan:
+    def plan(
+        self,
+        manifest: ContentViewManifest,
+        attestation: dict[str, Any] | None = None,
+    ) -> ContentSyncPlan:
         """Return a non-mutating ContentSyncPlan. No I/O performed."""
 
         if self._locus not in self.ALLOWED_LOCI:
@@ -124,6 +158,37 @@ class ContentViewSyncer:
                 policy_reason="already at latest version",
                 steps=[],
             )
+
+        # ── deploy gate: bind the switch to a signed attestation of THIS version ──
+        # A newer version being *available* is not authority to switch to it. The
+        # switch is authorized only by a release attestation that verifies and
+        # binds this exact (org, content_view, version). Fail closed.
+        decision: AttestationDecision | None = None
+        if self._require_attestation:
+            decision = verify_release_attestation(
+                attestation,
+                org=manifest.org,
+                content_view=manifest.content_view,
+                version=manifest.version,
+                trusted_key=self._attestation_public_key,
+                verifier=self._attestation_verifier,
+            )
+            if not decision.ok:
+                return ContentSyncPlan(
+                    schema=SYNC_SCHEMA,
+                    org=manifest.org,
+                    content_view=manifest.content_view,
+                    from_version=self._current_version,
+                    to_version=manifest.version,
+                    lifecycle_env=manifest.lifecycle_env,
+                    nix_cache_url=manifest.nix_cache_url,
+                    flake_ref=self._flake_ref,
+                    policy_gate="blocked",
+                    policy_reason=f"release attestation refused: {decision.reason}",
+                    steps=[],
+                    epistemic_level=decision.epistemic_level,
+                    attestation=decision.to_dict(),
+                )
 
         steps = []
 
@@ -158,10 +223,16 @@ class ContentViewSyncer:
             policy_gate="allowed",
             policy_reason=f"locus '{self._locus}' permitted; new version available",
             steps=steps,
+            epistemic_level=(decision.epistemic_level if decision else "Speculative"),
+            attestation=(decision.to_dict() if decision else None),
         )
 
     def execute(self, plan: ContentSyncPlan, dry_run: bool = True) -> dict[str, Any]:
         """Execute the sync plan. dry_run=True (default) only prints steps.
+
+        Steps run in order and the loop ABORTS on the first failed or timed-out
+        step: a verification (or nix copy) that fails must PREVENT the subsequent
+        `nixos-rebuild switch`, not merely be reported after it already ran.
 
         Always emits a SyncCycleReceipt in the return dict under 'receipt'.
         """
@@ -169,7 +240,9 @@ class ContentViewSyncer:
         t_start = time.monotonic()
 
         if not plan.allowed:
-            outcome = "denied" if plan.policy_gate == "denied" else "skipped"
+            outcome = "denied" if plan.policy_gate == "denied" else (
+                "blocked" if plan.policy_gate == "blocked" else "skipped"
+            )
             receipt = self._build_receipt(
                 cycle_id=cycle_id,
                 plan=plan,
@@ -185,7 +258,18 @@ class ContentViewSyncer:
             }
 
         results = []
+        aborted = False
         for step in plan.steps:
+            if aborted:
+                # Fail closed: once a step fails we refuse to run anything after
+                # it — above all the nixos-rebuild switch.
+                results.append({
+                    "step": step,
+                    "status": "not-run",
+                    "reason": "aborted: a prior step failed — refusing to proceed to nixos-rebuild",
+                })
+                continue
+
             if dry_run:
                 results.append({"step": step, "status": "dry_run", "reason": "dry_run=True"})
                 continue
@@ -201,19 +285,23 @@ class ContentViewSyncer:
                 proc = subprocess.run(
                     step, shell=True, capture_output=True, text=True, timeout=600
                 )
+                status = "ok" if proc.returncode == 0 else "failed"
                 results.append({
                     "step": step,
-                    "status": "ok" if proc.returncode == 0 else "failed",
+                    "status": status,
                     "returncode": proc.returncode,
                     "stdout": proc.stdout.strip()[:500],
                     "stderr": proc.stderr.strip()[:500],
                 })
+                if status == "failed":
+                    aborted = True
             except subprocess.TimeoutExpired:
                 results.append({"step": step, "status": "timeout"})
+                aborted = True
 
         duration_ms = int((time.monotonic() - t_start) * 1000)
         outcome = "dry_run" if dry_run else (
-            "applied" if all(r.get("status") in ("ok", "dry_run", "skipped") for r in results)
+            "applied" if (not aborted and all(r.get("status") in ("ok", "dry_run", "skipped") for r in results))
             else "failed"
         )
         receipt = self._build_receipt(
@@ -256,6 +344,10 @@ class ContentViewSyncer:
             "outcome": outcome,
             "policyGate": plan.policy_gate,
             "policyReason": plan.policy_reason,
+            # The switch's epistemic level travels with the receipt: unattested
+            # switches are visibly Speculative downstream, never laundered to Proved.
+            "epistemicLevel": plan.epistemic_level,
+            "attestation": plan.attestation,
             "steps": steps,
             "nixCacheUrl": plan.nix_cache_url,
             "flakeRef": plan.flake_ref,

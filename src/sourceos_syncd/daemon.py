@@ -53,6 +53,9 @@ class SyncDaemon:
         verify_ssl: bool = True,
         signing_public_key: str | None = None,
         agentplane_run_ref: str | None = None,
+        require_attestation: bool = True,
+        attestation_public_key: str | None = None,
+        attestation_dir: str | None = None,
     ) -> None:
         self._client = KatelloContentClient(
             base_url=katello_url,
@@ -67,6 +70,10 @@ class SyncDaemon:
         self._flake_ref = flake_ref
         self._signing_public_key = signing_public_key
         self._agentplane_run_ref = agentplane_run_ref
+        self._require_attestation = require_attestation
+        self._attestation_public_key = attestation_public_key
+        self._attestation_dir = attestation_dir
+        self._attestation_verifier = None  # injectable in tests; default = real minisign
         self._poll_interval_s = poll_interval_s
         self._store = ReceiptStore(root=store_root or "/var/lib/sourceos-syncd")
         self._running = True
@@ -111,6 +118,23 @@ class SyncDaemon:
         log.info("daemon stopped")
         return 0
 
+    def _load_attestation(self, manifest: ContentViewManifest) -> dict[str, Any] | None:
+        """Load the release attestation for this version, if one is available.
+
+        Reads ``{attestation_dir}/{content_view}-{version}.json``. Returns None when
+        no attestation_dir is configured or no file exists — and None means the
+        gate refuses (fail closed), which is the intended posture until the paired
+        producer WO publishes attestations.
+        """
+        if not self._attestation_dir:
+            return None
+        path = os.path.join(self._attestation_dir, f"{manifest.content_view}-{manifest.version}.json")
+        try:
+            with open(path, encoding="utf-8") as fh:
+                return json.load(fh)
+        except (OSError, ValueError):
+            return None
+
     def _poll_once(self) -> None:
         current_version = self._store.read_current_version()
         manifest = self._client.get_latest_version(self._content_view, self._lifecycle_env)
@@ -121,8 +145,11 @@ class SyncDaemon:
             current_version=current_version,
             signing_public_key=self._signing_public_key,
             agentplane_run_ref=self._agentplane_run_ref,
+            require_attestation=self._require_attestation,
+            attestation_public_key=self._attestation_public_key,
+            attestation_verifier=self._attestation_verifier,
         )
-        plan = syncer.plan(manifest)
+        plan = syncer.plan(manifest, attestation=self._load_attestation(manifest))
 
         if plan.policy_gate == "no-op":
             log.debug("already at %s — no sync needed", manifest.version)
