@@ -43,7 +43,7 @@ Control plane:
 - [`schemas/sourceos.process-provenance.v0.1.schema.json`](schemas/sourceos.process-provenance.v0.1.schema.json)
 - [`schemas/sourceos-event.schema.json`](schemas/sourceos-event.schema.json)
 - [`schemas/sourceos-service.schema.json`](schemas/sourceos-service.schema.json)
-- [`schemas/sourceos-capability.schema.json`](schemas/sourceos-capability.schema.json)
+- [`schemas/sourceos-capability.schema.json`](schemas/sourceos-capability.schema.json) — **not runtime-enforced.** Shape-validated only (`tools/validate_json_schemas.py`, `tools/validate_control_plane_examples.py`); `default_decision`/`requires_user_consent`/`audit`/`privacy_impact` are declarative fields nothing in this daemon reads. Real capability gating lives in `src/sourceos_syncd/orchestration_events.py`'s `capability_id`/`effect_class`/`required_policy_outcome`/`approval_mode` model, which this schema does not connect to.
 - [`schemas/sourceos-launch-manifest.schema.json`](schemas/sourceos-launch-manifest.schema.json)
 - [`schemas/sourceos-incident.schema.json`](schemas/sourceos-incident.schema.json)
 
