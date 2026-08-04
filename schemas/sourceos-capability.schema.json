@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sourceos.dev/schemas/sourceos-capability.schema.json",
   "title": "SourceOS Capability Definition",
+  "$comment": "NOT WIRED TO RUNTIME (verified 2026-08-04). `default_decision`, `requires_user_consent`, `audit`, and `privacy_impact` are declarative only: nothing in this daemon reads them to gate, prompt, or refuse anything. The two consumers that touch this file (tools/validate_json_schemas.py, tools/validate_control_plane_examples.py) check shape/schema_version only. The daemon's REAL capability-gating code is src/sourceos_syncd/orchestration_events.py, which uses a different record shape entirely (capability_id/effect_class/required_policy_outcome/approval_mode) with no connection to this schema. Before adding a fixture with requires_user_consent:true or wiring a reader here, decide: should this schema be unified into orchestration_events.py's real gate, or is it a forward-declared capability catalog that predates the gate it was meant to feed? (declared-unenforced register item #9, 2026-07-29 estate audit)",
   "type": "object",
   "required": [
     "schema_version",
